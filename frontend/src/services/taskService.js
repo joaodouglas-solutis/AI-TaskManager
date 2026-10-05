@@ -1,193 +1,136 @@
-import {
-    TASK_STATUS,
-    TASK_PRIORITY
-} from "../types/task";
+import apiClient from "./apiClient";
 
-const STORAGE_KEY = "taskflow-tasks";
+const TASKS_ENDPOINT = "/api/tasks";
 
-const initialTasks = [
-    {
-        id: crypto.randomUUID(),
-        title: "Estudar Spring AI",
-        status: TASK_STATUS.TODO,
-        priority: TASK_PRIORITY.NORMAL
-    },
-    {
-        id: crypto.randomUUID(),
-        title: "Criar testes da API",
-        status: TASK_STATUS.TODO,
-        priority: TASK_PRIORITY.HIGH
-    },
-    {
-        id: crypto.randomUUID(),
-        title: "Atualizar README",
-        status: TASK_STATUS.TODO,
-        priority: TASK_PRIORITY.LOW
-    },
-    {
-        id: crypto.randomUUID(),
-        title: "Finalizar API",
-        status: TASK_STATUS.IN_PROGRESS,
-        priority: TASK_PRIORITY.HIGH
-    },
-    {
-        id: crypto.randomUUID(),
-        title: "Revisar arquitetura",
-        status: TASK_STATUS.DONE,
-        priority: TASK_PRIORITY.NORMAL
-    },
-    {
-        id: crypto.randomUUID(),
-        title: "Configurar PostgreSQL",
-        status: TASK_STATUS.DONE,
-        priority: TASK_PRIORITY.NORMAL
-    }
-];
+function normalizeTask(task) {
+    return {
+        ...task,
+        description:
+            task.description ?? "",
+        dueDate:
+            task.dueDate ?? null
+    };
+}
 
-/**
- * Camada responsável por ler as tarefas.
- *
- * Futuramente:
- * localStorage → API REST
- */
-function getTasks() {
-    const storedTasks =
-        localStorage.getItem(STORAGE_KEY);
-
-    if (!storedTasks) {
-        saveTasks(initialTasks);
-
-        return [...initialTasks];
-    }
-
-    try {
-        return JSON.parse(storedTasks);
-    } catch (error) {
-        console.error(
-            "Não foi possível carregar as tarefas.",
-            error
+async function getTasks() {
+    const tasks =
+        await apiClient.get(
+            TASKS_ENDPOINT
         );
 
-        saveTasks(initialTasks);
-
-        return [...initialTasks];
-    }
+    return tasks.map(normalizeTask);
 }
 
-/**
- * Persiste as tarefas.
- *
- * Futuramente esta responsabilidade poderá
- * ser substituída por uma requisição HTTP.
- */
-function saveTasks(tasks) {
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(tasks)
-    );
+async function createTask({
+                              title,
+                              description = "",
+                              priority,
+                              dueDate = null
+                          }) {
+    const task =
+        await apiClient.post(
+            TASKS_ENDPOINT,
+            {
+                title,
+                description,
+                priority,
+                dueDate
+            }
+        );
+
+    return normalizeTask(task);
 }
 
-/**
- * Cria uma nova tarefa.
- */
-function createTask({
-                        title,
-                        priority = TASK_PRIORITY.NORMAL
-                    }) {
-    const tasks = getTasks();
+async function updateTask(task) {
+    const updatedTask =
+        await apiClient.put(
+            `${TASKS_ENDPOINT}/${task.id}`,
+            {
+                title: task.title,
+                description:
+                    task.description ?? "",
+                status: task.status,
+                priority: task.priority,
+                dueDate:
+                    task.dueDate ?? null
+            }
+        );
 
-    const newTask = {
-        id: crypto.randomUUID(),
-        title,
-        status: TASK_STATUS.TODO,
-        priority
-    };
-
-    const updatedTasks = [
-        newTask,
-        ...tasks
-    ];
-
-    saveTasks(updatedTasks);
-
-    return newTask;
+    return normalizeTask(updatedTask);
 }
 
-/**
- * Atualiza uma tarefa existente.
- */
-function updateTask(taskId, changes) {
-    const tasks = getTasks();
-
-    const taskExists = tasks.some(
-        (task) => task.id === taskId
+async function deleteTask(taskId) {
+    await apiClient.remove(
+        `${TASKS_ENDPOINT}/${taskId}`
     );
-
-    if (!taskExists) {
-        return null;
-    }
-
-    const updatedTasks = tasks.map((task) => {
-        if (task.id !== taskId) {
-            return task;
-        }
-
-        return {
-            ...task,
-            ...changes
-        };
-    });
-
-    saveTasks(updatedTasks);
-
-    return updatedTasks.find(
-        (task) => task.id === taskId
-    );
-}
-
-/**
- * Remove uma tarefa.
- */
-function deleteTask(taskId) {
-    const tasks = getTasks();
-
-    const updatedTasks = tasks.filter(
-        (task) => task.id !== taskId
-    );
-
-    const taskDeleted =
-        updatedTasks.length !== tasks.length;
-
-    if (!taskDeleted) {
-        return false;
-    }
-
-    saveTasks(updatedTasks);
 
     return true;
 }
 
-/**
- * Remove todas as tarefas.
- *
- * Útil para testes durante o desenvolvimento.
- */
-function clearTasks() {
-    localStorage.removeItem(STORAGE_KEY);
+async function improveTask(taskId) {
+    return apiClient.post(
+        `${TASKS_ENDPOINT}/${taskId}/ai/improve`,
+        {}
+    );
 }
 
-/**
- * Interface pública do serviço.
- *
- * O restante da aplicação deve conversar
- * com as tarefas através daqui.
- */
+async function analyzeTask(taskId) {
+    return apiClient.post(
+        `${TASKS_ENDPOINT}/${taskId}/ai/analyze`,
+        {}
+    );
+}
+
+async function decomposeTask(taskId) {
+    return apiClient.post(
+        `${TASKS_ENDPOINT}/${taskId}/ai/decompose`,
+        {}
+    );
+}
+
+async function createSubtasks(
+    parentTaskId,
+    subtasks
+) {
+    const response =
+        await apiClient.post(
+            `${TASKS_ENDPOINT}/${parentTaskId}/subtasks`,
+            {
+                subtasks: subtasks.map(
+                    (subtask) => ({
+                        title:
+                        subtask.title,
+                        description:
+                        subtask.description
+                    })
+                )
+            }
+        );
+
+    return response.map(normalizeTask);
+}
+
+async function getSubtasks(
+    parentTaskId
+) {
+    const subtasks =
+        await apiClient.get(
+            `${TASKS_ENDPOINT}/${parentTaskId}/subtasks`
+        );
+
+    return subtasks.map(normalizeTask);
+}
+
 const taskService = {
     getTasks,
     createTask,
     updateTask,
     deleteTask,
-    clearTasks
+    improveTask,
+    analyzeTask,
+    decomposeTask,
+    createSubtasks,
+    getSubtasks
 };
 
 export default taskService;

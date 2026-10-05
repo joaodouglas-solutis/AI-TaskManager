@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/taskmanager
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:1234}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        format_sql: true
+
+  ai:
+    model:
+      chat: ollama
+
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+
+      chat:
+        model: ${OLLAMA_MODEL:qwen2.5:3b}
+        temperature: 0.2

@@ -1,15 +1,14 @@
 package com.douglas.aitaskmanager.service;
 
+import com.douglas.aitaskmanager.dto.CreateSubtasksRequest;
 import com.douglas.aitaskmanager.dto.CreateTaskRequest;
 import com.douglas.aitaskmanager.dto.TaskResponse;
+import com.douglas.aitaskmanager.dto.UpdateTaskRequest;
 import com.douglas.aitaskmanager.entity.Task;
-import com.douglas.aitaskmanager.enums.TaskPriority;
 import com.douglas.aitaskmanager.enums.TaskStatus;
 import com.douglas.aitaskmanager.exception.TaskNotFoundException;
 import com.douglas.aitaskmanager.repository.TaskRepository;
 import org.springframework.stereotype.Service;
-import com.douglas.aitaskmanager.dto.UpdateTaskRequest;
-import com.douglas.aitaskmanager.dto.CreateSubtasksRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,39 +18,82 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(
+            TaskRepository taskRepository
+    ) {
         this.taskRepository = taskRepository;
     }
 
-    public TaskResponse create(CreateTaskRequest request) {
-
+    public TaskResponse create(
+            CreateTaskRequest request
+    ) {
         Task task = new Task();
 
-        task.setTitle(request.title());
-        task.setDescription(request.description());
-        task.setDueDate(request.dueDate());
+        task.setTitle(
+                request.title()
+        );
 
-        task.setStatus(TaskStatus.TODO);
-        task.setPriority(TaskPriority.MEDIUM);
-        task.setCreatedAt(LocalDateTime.now());
+        task.setDescription(
+                request.description()
+        );
 
-        Task savedTask = taskRepository.save(task);
+        task.setDueDate(
+                request.dueDate()
+        );
+
+        task.setStatus(
+                TaskStatus.TODO
+        );
+
+        task.setPriority(
+                request.priority()
+        );
+
+        task.setCreatedAt(
+                LocalDateTime.now()
+        );
+
+        Task savedTask =
+                taskRepository.save(task);
 
         return toResponse(savedTask);
     }
 
-    public TaskResponse update(Long id, UpdateTaskRequest request) {
+    public TaskResponse update(
+            Long id,
+            UpdateTaskRequest request
+    ) {
+        Task task =
+                taskRepository.findById(id)
+                        .orElseThrow(
+                                () ->
+                                        new TaskNotFoundException(
+                                                id
+                                        )
+                        );
 
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException(id));
+        task.setTitle(
+                request.title()
+        );
 
-        task.setTitle(request.title());
-        task.setDescription(request.description());
-        task.setStatus(request.status());
-        task.setPriority(request.priority());
-        task.setDueDate(request.dueDate());
+        task.setDescription(
+                request.description()
+        );
 
-        Task updatedTask = taskRepository.save(task);
+        task.setStatus(
+                request.status()
+        );
+
+        task.setPriority(
+                request.priority()
+        );
+
+        task.setDueDate(
+                request.dueDate()
+        );
+
+        Task updatedTask =
+                taskRepository.save(task);
 
         return toResponse(updatedTask);
     }
@@ -63,16 +105,24 @@ public class TaskService {
                 .toList();
     }
 
-    public TaskResponse findById(Long id) {
-
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new TaskNotFoundException(id));
+    public TaskResponse findById(
+            Long id
+    ) {
+        Task task =
+                taskRepository.findById(id)
+                        .orElseThrow(
+                                () ->
+                                        new TaskNotFoundException(
+                                                id
+                                        )
+                        );
 
         return toResponse(task);
     }
 
-    private TaskResponse toResponse(Task task) {
-
+    private TaskResponse toResponse(
+            Task task
+    ) {
         return new TaskResponse(
                 task.getId(),
                 task.getTitle(),
@@ -91,49 +141,92 @@ public class TaskService {
             Long parentTaskId,
             CreateSubtasksRequest request
     ) {
+        Task parentTask =
+                taskRepository.findById(
+                                parentTaskId
+                        )
+                        .orElseThrow(
+                                () ->
+                                        new TaskNotFoundException(
+                                                parentTaskId
+                                        )
+                        );
 
-        Task parentTask = taskRepository.findById(parentTaskId)
-                .orElseThrow(() -> new TaskNotFoundException(parentTaskId));
+        List<Task> subtasks =
+                request.subtasks()
+                        .stream()
+                        .map(
+                                subtaskRequest -> {
+                                    Task subtask =
+                                            new Task();
 
-        List<Task> subtasks = request.subtasks()
+                                    subtask.setTitle(
+                                            subtaskRequest.title()
+                                    );
+
+                                    subtask.setDescription(
+                                            subtaskRequest.description()
+                                    );
+
+                                    subtask.setStatus(
+                                            TaskStatus.TODO
+                                    );
+
+                                    subtask.setPriority(
+                                            com.douglas.aitaskmanager.enums.TaskPriority.MEDIUM
+                                    );
+
+                                    subtask.setDueDate(
+                                            null
+                                    );
+
+                                    subtask.setCreatedAt(
+                                            LocalDateTime.now()
+                                    );
+
+                                    subtask.setParentTask(
+                                            parentTask
+                                    );
+
+                                    return subtask;
+                                }
+                        )
+                        .toList();
+
+        List<Task> savedSubtasks =
+                taskRepository.saveAll(
+                        subtasks
+                );
+
+        return savedSubtasks
                 .stream()
-                .map(subtaskRequest -> {
-
-                    Task subtask = new Task();
-
-                    subtask.setTitle(subtaskRequest.title());
-                    subtask.setDescription(subtaskRequest.description());
-                    subtask.setStatus(TaskStatus.TODO);
-                    subtask.setPriority(TaskPriority.MEDIUM);
-                    subtask.setDueDate(null);
-                    subtask.setCreatedAt(LocalDateTime.now());
-                    subtask.setParentTask(parentTask);
-
-                    return subtask;
-                })
-                .toList();
-
-        List<Task> savedSubtasks = taskRepository.saveAll(subtasks);
-
-        return savedSubtasks.stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public List<TaskResponse> findSubtasks(Long parentTaskId) {
+    public List<TaskResponse> findSubtasks(
+            Long parentTaskId
+    ) {
+        taskRepository.findById(
+                        parentTaskId
+                )
+                .orElseThrow(
+                        () ->
+                                new TaskNotFoundException(
+                                        parentTaskId
+                                )
+                );
 
-        taskRepository.findById(parentTaskId)
-                .orElseThrow(() -> new TaskNotFoundException(parentTaskId));
-
-        return taskRepository.findAllByParentTaskId(parentTaskId)
+        return taskRepository
+                .findAllByParentTaskId(
+                        parentTaskId
+                )
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
-
 
     public void delete(Long id) {
-
         if (!taskRepository.existsById(id)) {
             throw new TaskNotFoundException(id);
         }

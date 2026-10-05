@@ -3,15 +3,14 @@ package com.douglas.aitaskmanager.entity;
 import com.douglas.aitaskmanager.enums.TaskPriority;
 import com.douglas.aitaskmanager.enums.TaskStatus;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -98,5 +97,13 @@ public class Task {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Task getParentTask() {
+        return parentTask;
+    }
+
+    public void setParentTask(Task parentTask) {
+        this.parentTask = parentTask;
     }
 }

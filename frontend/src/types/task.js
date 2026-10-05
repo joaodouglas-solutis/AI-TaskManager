@@ -6,6 +6,6 @@ export const TASK_STATUS = {
 
 export const TASK_PRIORITY = {
     LOW: "LOW",
-    NORMAL: "NORMAL",
+    MEDIUM: "MEDIUM",
     HIGH: "HIGH"
 };

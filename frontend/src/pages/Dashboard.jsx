@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Header from "../components/Header";
 import AIAssistant from "../components/AIAssistant";
 import TaskColumn from "../components/TaskColumn";
 import NewTaskModal from "../components/NewTaskModal";
+import EditTaskModal from "../components/EditTaskModal";
 
 import { useTheme } from "../hooks/useTheme";
 import taskService from "../services/taskService";
@@ -23,7 +24,7 @@ const STATUS_LABELS = {
 
 const PRIORITY_LABELS = {
     [TASK_PRIORITY.HIGH]: "ALTA",
-    [TASK_PRIORITY.NORMAL]: "NORMAL",
+    [TASK_PRIORITY.MEDIUM]: "MÉDIA",
     [TASK_PRIORITY.LOW]: "BAIXA"
 };
 
@@ -58,31 +59,78 @@ function formatCurrentDate() {
 }
 
 function Dashboard() {
-    const { theme, toggleTheme } = useTheme();
+    const { theme, toggleTheme } =
+        useTheme();
 
-    const [tasks, setTasks] = useState(
-        () => taskService.getTasks()
-    );
+    const [tasks, setTasks] =
+        useState([]);
+
+    const [isLoading, setIsLoading] =
+        useState(true);
+
+    const [error, setError] =
+        useState("");
 
     const [isModalOpen, setIsModalOpen] =
         useState(false);
 
+    const [editingTask, setEditingTask] =
+        useState(null);
+
     const [activeFilter, setActiveFilter] =
         useState("ALL");
 
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadTasks() {
+            try {
+                setIsLoading(true);
+                setError("");
+
+                const loadedTasks =
+                    await taskService.getTasks();
+
+                if (isMounted) {
+                    setTasks(loadedTasks);
+                }
+            } catch (requestError) {
+                if (isMounted) {
+                    setError(
+                        requestError.message ||
+                        "Não foi possível carregar as tarefas."
+                    );
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        loadTasks();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     const todoTasks = tasks.filter(
         (task) =>
-            task.status === TASK_STATUS.TODO
+            task.status ===
+            TASK_STATUS.TODO
     );
 
     const inProgressTasks = tasks.filter(
         (task) =>
-            task.status === TASK_STATUS.IN_PROGRESS
+            task.status ===
+            TASK_STATUS.IN_PROGRESS
     );
 
     const doneTasks = tasks.filter(
         (task) =>
-            task.status === TASK_STATUS.DONE
+            task.status ===
+            TASK_STATUS.DONE
     );
 
     const openTasks =
@@ -96,7 +144,8 @@ function Dashboard() {
             tasks: todoTasks
         },
         {
-            status: TASK_STATUS.IN_PROGRESS,
+            status:
+            TASK_STATUS.IN_PROGRESS,
             title: "Em andamento",
             tasks: inProgressTasks
         },
@@ -112,107 +161,279 @@ function Dashboard() {
             ? boardColumns
             : boardColumns.filter(
                 (column) =>
-                    column.status === activeFilter
+                    column.status ===
+                    activeFilter
             );
 
-    const handleCreateTask = (taskData) => {
-        const newTask =
-            taskService.createTask(taskData);
+    const handleCreateTask =
+        async (taskData) => {
+            try {
+                setError("");
 
-        setTasks((currentTasks) => [
-            newTask,
-            ...currentTasks
-        ]);
+                const newTask =
+                    await taskService.createTask(
+                        taskData
+                    );
 
-        setIsModalOpen(false);
-    };
+                setTasks(
+                    (currentTasks) => [
+                        newTask,
+                        ...currentTasks
+                    ]
+                );
 
-    const handleMoveTask = (
-        taskId,
-        destinationStatus
-    ) => {
-        const task = tasks.find(
-            (currentTask) =>
-                currentTask.id === taskId
-        );
+                setIsModalOpen(false);
 
-        if (!task) {
-            return;
-        }
+                return true;
+            } catch (requestError) {
+                setError(
+                    requestError.message ||
+                    "Não foi possível criar a tarefa."
+                );
 
-        if (task.status === destinationStatus) {
-            return;
-        }
-
-        const updatedTask =
-            taskService.updateTask(
-                taskId,
-                {
-                    status: destinationStatus
-                }
-            );
-
-        if (!updatedTask) {
-            return;
-        }
-
-        setTasks((currentTasks) =>
-            currentTasks.map((currentTask) =>
-                currentTask.id === taskId
-                    ? updatedTask
-                    : currentTask
-            )
-        );
-    };
-
-    const handleAdvanceStatus = (taskId) => {
-        const task = tasks.find(
-            (currentTask) =>
-                currentTask.id === taskId
-        );
-
-        if (!task) {
-            return;
-        }
-
-        const nextStatus = {
-            [TASK_STATUS.TODO]:
-            TASK_STATUS.IN_PROGRESS,
-
-            [TASK_STATUS.IN_PROGRESS]:
-            TASK_STATUS.DONE,
-
-            [TASK_STATUS.DONE]:
-            TASK_STATUS.TODO
+                return false;
+            }
         };
 
-        handleMoveTask(
+    const handleMoveTask =
+        async (
             taskId,
-            nextStatus[task.status]
+            destinationStatus
+        ) => {
+            const normalizedTaskId =
+                Number(taskId);
+
+            if (
+                !Number.isFinite(
+                    normalizedTaskId
+                )
+            ) {
+                return;
+            }
+
+            const task = tasks.find(
+                (currentTask) =>
+                    currentTask.id ===
+                    normalizedTaskId
+            );
+
+            if (!task) {
+                return;
+            }
+
+            if (
+                task.status ===
+                destinationStatus
+            ) {
+                return;
+            }
+
+            try {
+                setError("");
+
+                const updatedTask =
+                    await taskService.updateTask({
+                        ...task,
+                        status:
+                        destinationStatus
+                    });
+
+                setTasks(
+                    (currentTasks) =>
+                        currentTasks.map(
+                            (currentTask) =>
+                                currentTask.id ===
+                                normalizedTaskId
+                                    ? updatedTask
+                                    : currentTask
+                        )
+                );
+            } catch (requestError) {
+                setError(
+                    requestError.message ||
+                    "Não foi possível atualizar a tarefa."
+                );
+            }
+        };
+
+    const handleAdvanceStatus =
+        async (taskId) => {
+            const normalizedTaskId =
+                Number(taskId);
+
+            const task = tasks.find(
+                (currentTask) =>
+                    currentTask.id ===
+                    normalizedTaskId
+            );
+
+            if (!task) {
+                return;
+            }
+
+            const nextStatus = {
+                [TASK_STATUS.TODO]:
+                TASK_STATUS.IN_PROGRESS,
+
+                [TASK_STATUS.IN_PROGRESS]:
+                TASK_STATUS.DONE,
+
+                [TASK_STATUS.DONE]:
+                TASK_STATUS.TODO
+            };
+
+            await handleMoveTask(
+                normalizedTaskId,
+                nextStatus[task.status]
+            );
+        };
+
+    const handleDeleteTask =
+        async (taskId) => {
+            const normalizedTaskId =
+                Number(taskId);
+
+            if (
+                !Number.isFinite(
+                    normalizedTaskId
+                )
+            ) {
+                return;
+            }
+
+            try {
+                setError("");
+
+                await taskService.deleteTask(
+                    normalizedTaskId
+                );
+
+                setTasks(
+                    (currentTasks) =>
+                        currentTasks.filter(
+                            (task) =>
+                                task.id !==
+                                normalizedTaskId
+                        )
+                );
+            } catch (requestError) {
+                setError(
+                    requestError.message ||
+                    "Não foi possível excluir a tarefa."
+                );
+            }
+        };
+
+    const handleEditTask =
+        async (updatedTask) => {
+            try {
+                setError("");
+
+                const savedTask =
+                    await taskService.updateTask(
+                        updatedTask
+                    );
+
+                setTasks(
+                    (currentTasks) =>
+                        currentTasks.map(
+                            (currentTask) =>
+                                currentTask.id ===
+                                savedTask.id
+                                    ? savedTask
+                                    : currentTask
+                        )
+                );
+
+                return true;
+            } catch (requestError) {
+                setError(
+                    requestError.message ||
+                    "Não foi possível atualizar a tarefa."
+                );
+
+                return false;
+            }
+        };
+
+    const handleSubtasksCreated =
+        (createdSubtasks) => {
+            setTasks(
+                (currentTasks) => [
+                    ...createdSubtasks,
+                    ...currentTasks
+                ]
+            );
+        };
+
+    if (isLoading) {
+        return (
+            <main className="app">
+                <Header
+                    theme={theme}
+                    toggleTheme={
+                        toggleTheme
+                    }
+                />
+
+                <section className="hero">
+                    <div className="hero-copy">
+                        <span className="eyebrow">
+                            CARREGANDO
+                        </span>
+
+                        <h1>
+                            Preparando seu workspace.
+                        </h1>
+
+                        <p>
+                            Buscando suas tarefas...
+                        </p>
+                    </div>
+                </section>
+            </main>
         );
-    };
+    }
 
-    const handleDeleteTask = (taskId) => {
-        const wasDeleted =
-            taskService.deleteTask(taskId);
+    if (
+        error &&
+        tasks.length === 0
+    ) {
+        return (
+            <main className="app">
+                <Header
+                    theme={theme}
+                    toggleTheme={
+                        toggleTheme
+                    }
+                />
 
-        if (!wasDeleted) {
-            return;
-        }
+                <section className="hero">
+                    <div className="hero-copy">
+                        <span className="eyebrow">
+                            ERRO
+                        </span>
 
-        setTasks((currentTasks) =>
-            currentTasks.filter(
-                (task) =>
-                    task.id !== taskId
-            )
+                        <h1>
+                            O backend não respondeu.
+                        </h1>
+
+                        <p>
+                            {error}
+                        </p>
+                    </div>
+                </section>
+            </main>
         );
-    };
+    }
 
     return (
         <main className="app">
             <Header
                 theme={theme}
-                toggleTheme={toggleTheme}
+                toggleTheme={
+                    toggleTheme
+                }
             />
 
             <section className="hero">
@@ -253,6 +474,12 @@ function Dashboard() {
                     </button>
                 </div>
             </section>
+
+            {error && (
+                <div className="empty-state">
+                    {error}
+                </div>
+            )}
 
             <section className="focus-layout">
                 <div className="focus-section">
@@ -308,7 +535,9 @@ function Dashboard() {
 
                                     <div className="focus-content">
                                         <span className="focus-title">
-                                            {task.title}
+                                            {
+                                                task.title
+                                            }
                                         </span>
 
                                         <span className="focus-status">
@@ -356,31 +585,38 @@ function Dashboard() {
                     </div>
 
                     <div className="task-filters">
-                        {FILTERS.map((filter) => (
-                            <button
-                                key={filter.key}
-                                type="button"
-                                className={
-                                    activeFilter ===
-                                    filter.key
-                                        ? "filter-active"
-                                        : ""
-                                }
-                                onClick={() =>
-                                    setActiveFilter(
+                        {FILTERS.map(
+                            (filter) => (
+                                <button
+                                    key={
                                         filter.key
-                                    )
-                                }
-                            >
-                                {filter.label}
-                            </button>
-                        ))}
+                                    }
+                                    type="button"
+                                    className={
+                                        activeFilter ===
+                                        filter.key
+                                            ? "filter-active"
+                                            : ""
+                                    }
+                                    onClick={() =>
+                                        setActiveFilter(
+                                            filter.key
+                                        )
+                                    }
+                                >
+                                    {
+                                        filter.label
+                                    }
+                                </button>
+                            )
+                        )}
                     </div>
                 </div>
 
                 <div
                     className={`task-board ${
-                        activeFilter !== "ALL"
+                        activeFilter !==
+                        "ALL"
                             ? "task-board-filtered"
                             : ""
                     }`}
@@ -388,15 +624,26 @@ function Dashboard() {
                     {visibleColumns.map(
                         (column) => (
                             <TaskColumn
-                                key={column.status}
-                                title={column.title}
-                                status={column.status}
-                                tasks={column.tasks}
+                                key={
+                                    column.status
+                                }
+                                title={
+                                    column.title
+                                }
+                                status={
+                                    column.status
+                                }
+                                tasks={
+                                    column.tasks
+                                }
                                 onAdvanceStatus={
                                     handleAdvanceStatus
                                 }
                                 onDelete={
                                     handleDeleteTask
+                                }
+                                onEdit={
+                                    setEditingTask
                                 }
                                 onMoveTask={
                                     handleMoveTask
@@ -414,6 +661,21 @@ function Dashboard() {
                     }
                     onSubmit={
                         handleCreateTask
+                    }
+                />
+            )}
+
+            {editingTask && (
+                <EditTaskModal
+                    task={editingTask}
+                    onClose={() =>
+                        setEditingTask(null)
+                    }
+                    onSubmit={
+                        handleEditTask
+                    }
+                    onSubtasksCreated={
+                        handleSubtasksCreated
                     }
                 />
             )}

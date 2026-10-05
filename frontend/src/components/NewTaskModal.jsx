@@ -8,27 +8,48 @@ function NewTaskModal({
                           onClose,
                           onSubmit
                       }) {
-    const [title, setTitle] = useState("");
-    const [priority, setPriority] = useState(
-        TASK_PRIORITY.NORMAL
-    );
+    const [title, setTitle] =
+        useState("");
 
-    const handleSubmit = (event) => {
+    const [priority, setPriority] =
+        useState(
+            TASK_PRIORITY.MEDIUM
+        );
+
+    const [isSubmitting, setIsSubmitting] =
+        useState(false);
+
+    const handleSubmit = async (event) => {
         event.preventDefault();
 
-        const trimmedTitle = title.trim();
+        const trimmedTitle =
+            title.trim();
 
-        if (!trimmedTitle) {
+        if (!trimmedTitle || isSubmitting) {
             return;
         }
 
-        onSubmit({
-            title: trimmedTitle,
-            priority
-        });
+        setIsSubmitting(true);
 
-        setTitle("");
-        setPriority(TASK_PRIORITY.NORMAL);
+        try {
+            const success =
+                await onSubmit({
+                    title: trimmedTitle,
+                    description: "",
+                    priority,
+                    dueDate: null
+                });
+
+            if (success) {
+                setTitle("");
+
+                setPriority(
+                    TASK_PRIORITY.MEDIUM
+                );
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -55,7 +76,9 @@ function NewTaskModal({
 
                     <button
                         className="modal-close"
+                        type="button"
                         onClick={onClose}
+                        disabled={isSubmitting}
                     >
                         ×
                     </button>
@@ -71,10 +94,13 @@ function NewTaskModal({
                         <input
                             value={title}
                             onChange={(event) =>
-                                setTitle(event.target.value)
+                                setTitle(
+                                    event.target.value
+                                )
                             }
                             placeholder="Ex.: Implementar autenticação"
                             autoFocus
+                            disabled={isSubmitting}
                         />
                     </label>
 
@@ -84,18 +110,33 @@ function NewTaskModal({
                         <select
                             value={priority}
                             onChange={(event) =>
-                                setPriority(event.target.value)
+                                setPriority(
+                                    event.target.value
+                                )
                             }
+                            disabled={isSubmitting}
                         >
-                            <option value={TASK_PRIORITY.LOW}>
+                            <option
+                                value={
+                                    TASK_PRIORITY.LOW
+                                }
+                            >
                                 Baixa
                             </option>
 
-                            <option value={TASK_PRIORITY.NORMAL}>
-                                Normal
+                            <option
+                                value={
+                                    TASK_PRIORITY.MEDIUM
+                                }
+                            >
+                                Média
                             </option>
 
-                            <option value={TASK_PRIORITY.HIGH}>
+                            <option
+                                value={
+                                    TASK_PRIORITY.HIGH
+                                }
+                            >
                                 Alta
                             </option>
                         </select>
@@ -106,6 +147,7 @@ function NewTaskModal({
                             type="button"
                             className="modal-cancel"
                             onClick={onClose}
+                            disabled={isSubmitting}
                         >
                             Cancelar
                         </button>
@@ -113,8 +155,14 @@ function NewTaskModal({
                         <button
                             type="submit"
                             className="modal-submit"
+                            disabled={
+                                isSubmitting ||
+                                !title.trim()
+                            }
                         >
-                            Criar tarefa
+                            {isSubmitting
+                                ? "Criando..."
+                                : "Criar tarefa"}
                         </button>
                     </div>
                 </form>

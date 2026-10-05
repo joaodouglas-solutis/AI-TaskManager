@@ -8,6 +8,7 @@ function TaskColumn({
                         tasks,
                         onAdvanceStatus,
                         onDelete,
+                        onEdit,
                         onMoveTask
                     }) {
     const [isDragOver, setIsDragOver] =
@@ -16,7 +17,8 @@ function TaskColumn({
     const handleDragOver = (event) => {
         event.preventDefault();
 
-        event.dataTransfer.dropEffect = "move";
+        event.dataTransfer.dropEffect =
+            "move";
 
         setIsDragOver(true);
     };
@@ -44,13 +46,18 @@ function TaskColumn({
             return;
         }
 
-        onMoveTask(taskId, status);
+        onMoveTask(
+            Number(taskId),
+            status
+        );
     };
 
     return (
         <div
             className={`task-column ${
-                isDragOver ? "is-drag-over" : ""
+                isDragOver
+                    ? "is-drag-over"
+                    : ""
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -87,13 +94,14 @@ function TaskColumn({
                         onDelete={
                             onDelete
                         }
+                        onEdit={onEdit}
                         onDragStart={(
                             event,
                             taskId
                         ) => {
                             event.dataTransfer.setData(
                                 "text/plain",
-                                taskId
+                                String(taskId)
                             );
 
                             event.dataTransfer.effectAllowed =
