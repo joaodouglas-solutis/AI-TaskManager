@@ -1,4 +1,5 @@
 import {
+    useCallback,
     useEffect,
     useMemo,
     useState
@@ -145,32 +146,31 @@ function Dashboard() {
     }, []);
 
     const loadAiSummary =
-        async () => {
-            try {
-                setIsAiLoading(true);
-                setAiError("");
+        useCallback(
+            async () => {
+                try {
+                    setIsAiLoading(true);
+                    setAiError("");
 
-                const result =
-                    await taskService.getWorkspaceAiSummary();
+                    const result =
+                        await taskService.getWorkspaceAiSummary();
 
-                setAiSummary(result);
-            } catch (requestError) {
-                setAiError(
-                    requestError.message ||
-                    "Não foi possível analisar o workspace."
-                );
-            } finally {
-                setIsAiLoading(false);
-            }
-        };
+                    setAiSummary(result);
+                } catch (requestError) {
+                    setAiError(
+                        requestError.message ||
+                        "Não foi possível analisar o workspace."
+                    );
+                } finally {
+                    setIsAiLoading(false);
+                }
+            },
+            []
+        );
 
     useEffect(() => {
-        if (isLoading) {
-            return;
-        }
-
         loadAiSummary();
-    }, [isLoading]);
+    }, [loadAiSummary]);
 
     const filteredTasks =
         useMemo(() => {

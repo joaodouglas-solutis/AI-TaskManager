@@ -16,6 +16,26 @@ import java.util.List;
 @Service
 public class OllamaTaskAiClient implements TaskAiClient {
 
+    private static final String KEEP_ALIVE = "30m";
+
+    private static final int NUM_THREAD = 6;
+    private static final int NUM_BATCH = 512;
+
+    private static final int CHAT_NUM_CTX = 1536;
+    private static final int CHAT_NUM_PREDICT = 96;
+
+    private static final int SUMMARY_NUM_CTX = 1536;
+    private static final int SUMMARY_NUM_PREDICT = 96;
+
+    private static final int ANALYSIS_NUM_CTX = 1536;
+    private static final int ANALYSIS_NUM_PREDICT = 128;
+
+    private static final int IMPROVE_NUM_CTX = 2048;
+    private static final int IMPROVE_NUM_PREDICT = 256;
+
+    private static final int DECOMPOSE_NUM_CTX = 2048;
+    private static final int DECOMPOSE_NUM_PREDICT = 384;
+
     private final ChatClient chatClient;
 
     public OllamaTaskAiClient(
@@ -37,7 +57,7 @@ public class OllamaTaskAiClient implements TaskAiClient {
                 Regras:
                 - Preserve a intenção original.
                 - Torne o título claro e objetivo.
-                - Torne a descrição mais detalhada e acionável.
+                - Torne a descrição detalhada e acionável.
                 - Não invente requisitos.
                 - Responda em português do Brasil.
 
@@ -55,17 +75,25 @@ public class OllamaTaskAiClient implements TaskAiClient {
         try {
             return chatClient
                     .prompt()
+                    .options(
+                            options(
+                                    IMPROVE_NUM_CTX,
+                                    IMPROVE_NUM_PREDICT,
+                                    0.2
+                            )
+                    )
                     .system("""
-                            Você é um assistente especializado em
-                            gerenciamento de tarefas de software.
+                            Você é um assistente especializado
+                            em gerenciamento de tarefas de software.
 
-                            Melhore as tarefas sem alterar sua intenção.
+                            Melhore tarefas sem alterar sua intenção.
                             """)
                     .user(prompt)
                     .call()
                     .entity(
                             ImprovedTaskResponse.class,
-                            spec -> spec.validateSchema()
+                            spec ->
+                                    spec.useProviderStructuredOutput()
                     );
 
         } catch (Exception exception) {
@@ -113,6 +141,13 @@ public class OllamaTaskAiClient implements TaskAiClient {
         try {
             return chatClient
                     .prompt()
+                    .options(
+                            options(
+                                    ANALYSIS_NUM_CTX,
+                                    ANALYSIS_NUM_PREDICT,
+                                    0.1
+                            )
+                    )
                     .system("""
                             Você é um analista de tarefas de software.
 
@@ -123,7 +158,8 @@ public class OllamaTaskAiClient implements TaskAiClient {
                     .call()
                     .entity(
                             TaskAnalysisResponse.class,
-                            spec -> spec.validateSchema()
+                            spec ->
+                                    spec.useProviderStructuredOutput()
                     );
 
         } catch (Exception exception) {
@@ -165,6 +201,13 @@ public class OllamaTaskAiClient implements TaskAiClient {
         try {
             return chatClient
                     .prompt()
+                    .options(
+                            options(
+                                    DECOMPOSE_NUM_CTX,
+                                    DECOMPOSE_NUM_PREDICT,
+                                    0.2
+                            )
+                    )
                     .system("""
                             Você é um analista de tarefas de software.
 
@@ -175,7 +218,8 @@ public class OllamaTaskAiClient implements TaskAiClient {
                     .call()
                     .entity(
                             TaskDecompositionResponse.class,
-                            spec -> spec.validateSchema()
+                            spec ->
+                                    spec.useProviderStructuredOutput()
                     );
 
         } catch (Exception exception) {
@@ -194,25 +238,20 @@ public class OllamaTaskAiClient implements TaskAiClient {
         String prompt = """
                 Analise o workspace abaixo e escreva um resumo curto e útil.
 
-                O resumo deve:
-                - Ter 1 ou 2 frases naturais.
-                - Ter entre 120 e 280 caracteres.
-                - Explicar brevemente o estado atual do workspace.
-                - Dizer qual é o principal ponto de atenção.
-                - Explicar por que essa tarefa merece atenção.
-                - Não listar várias tarefas.
-                - Não explicar subtarefas ou a hierarquia.
-                - Não descrever planejamento ou etapas.
-                - Não repetir informações desnecessárias.
-                - Soar como uma recomendação humana para o usuário.
-
-                Não escreva um rótulo ou fragmento.
-                Escreva uma frase completa e natural.
+                Regras:
+                - Tenha 1 ou 2 frases naturais.
+                - Explique brevemente o estado atual.
+                - Aponte o principal ponto de atenção.
+                - Explique por que esse ponto merece atenção.
+                - Não liste várias tarefas.
+                - Não explique subtarefas.
+                - Não explique hierarquia.
+                - Não faça planejamento.
+                - Não mostre IDs internos.
+                - Responda em português do Brasil.
 
                 Quando mencionar uma tarefa específica, use:
                 Tarefa "Título da tarefa"
-
-                Nunca mostre IDs internos.
 
                 <workspace>
                 %s
@@ -227,32 +266,25 @@ public class OllamaTaskAiClient implements TaskAiClient {
         try {
             return chatClient
                     .prompt()
+                    .options(
+                            options(
+                                    SUMMARY_NUM_CTX,
+                                    SUMMARY_NUM_PREDICT,
+                                    0.1
+                            )
+                    )
                     .system("""
                             Você é um assistente de produtividade.
 
-                            Sua resposta deve parecer uma observação curta
-                            de um assistente humano.
-
-                            summary:
-                            - 1 ou 2 frases completas.
-                            - Entre 120 e 280 caracteres.
-                            - Explique o estado do workspace.
-                            - Aponte o principal foco.
-                            - Diga brevemente por que esse foco é importante.
-                            - Não faça listas.
-                            - Não explique subtarefas.
-                            - Não explique hierarquia.
-                            - Não faça uma análise longa.
-                            - Não mostre IDs internos.
-
-                            Ao mencionar uma tarefa específica, use:
-                            Tarefa "Título da tarefa"
+                            Gere uma observação curta,
+                            clara e natural sobre o workspace.
                             """)
                     .user(prompt)
                     .call()
                     .entity(
                             WorkspaceAiSummaryResponse.class,
-                            spec -> spec.validateSchema()
+                            spec ->
+                                    spec.useProviderStructuredOutput()
                     );
 
         } catch (Exception exception) {
@@ -299,7 +331,7 @@ public class OllamaTaskAiClient implements TaskAiClient {
                 - Responda em português do Brasil.
                 - Não invente informações.
                 - Seja direto.
-                - Normalmente use 1 a 4 frases.
+                - Normalmente use no máximo 3 frases.
                 - Se não souber, diga que a informação não está disponível.
                 - Nunca revele IDs internos.
                 - Use os títulos das tarefas.
@@ -331,9 +363,11 @@ public class OllamaTaskAiClient implements TaskAiClient {
                     chatClient
                             .prompt()
                             .options(
-                                    OllamaChatOptions.builder()
-                                            .numPredict(256)
-                                            .temperature(0.2)
+                                    options(
+                                            CHAT_NUM_CTX,
+                                            CHAT_NUM_PREDICT,
+                                            0.1
+                                    )
                             )
                             .system("""
                                     Você é o assistente inteligente
@@ -373,5 +407,21 @@ public class OllamaTaskAiClient implements TaskAiClient {
                     exception
             );
         }
+    }
+
+    private OllamaChatOptions.Builder options(
+            int numCtx,
+            int numPredict,
+            double temperature
+    ) {
+
+        return OllamaChatOptions
+                .builder()
+                .numCtx(numCtx)
+                .numBatch(NUM_BATCH)
+                .numThread(NUM_THREAD)
+                .numPredict(numPredict)
+                .temperature(temperature)
+                .keepAlive(KEEP_ALIVE);
     }
 }
