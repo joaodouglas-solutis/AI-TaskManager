@@ -25,7 +25,10 @@ function NewTaskModal({
         const trimmedTitle =
             title.trim();
 
-        if (!trimmedTitle || isSubmitting) {
+        if (
+            !trimmedTitle ||
+            isSubmitting
+        ) {
             return;
         }
 
@@ -78,7 +81,9 @@ function NewTaskModal({
                         className="modal-close"
                         type="button"
                         onClick={onClose}
-                        disabled={isSubmitting}
+                        disabled={
+                            isSubmitting
+                        }
                     >
                         ×
                     </button>
@@ -100,7 +105,9 @@ function NewTaskModal({
                             }
                             placeholder="Ex.: Implementar autenticação"
                             autoFocus
-                            disabled={isSubmitting}
+                            disabled={
+                                isSubmitting
+                            }
                         />
                     </label>
 
@@ -114,7 +121,9 @@ function NewTaskModal({
                                     event.target.value
                                 )
                             }
-                            disabled={isSubmitting}
+                            disabled={
+                                isSubmitting
+                            }
                         >
                             <option
                                 value={
@@ -147,7 +156,9 @@ function NewTaskModal({
                             type="button"
                             className="modal-cancel"
                             onClick={onClose}
-                            disabled={isSubmitting}
+                            disabled={
+                                isSubmitting
+                            }
                         >
                             Cancelar
                         </button>

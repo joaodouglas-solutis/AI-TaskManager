@@ -1,4 +1,9 @@
-function Header({ theme, toggleTheme }) {
+function Header({
+                    theme,
+                    toggleTheme,
+                    searchQuery,
+                    onSearchChange
+                }) {
     return (
         <header className="topbar">
             <div className="brand">
@@ -12,25 +17,53 @@ function Header({ theme, toggleTheme }) {
             </div>
 
             <div className="search">
-                <span>⌕</span>
+                <span>
+                    ⌕
+                </span>
 
                 <input
                     type="text"
+                    value={searchQuery}
+                    onChange={(event) =>
+                        onSearchChange(
+                            event.target.value
+                        )
+                    }
                     placeholder="Buscar tarefas..."
+                    aria-label="Buscar tarefas"
                 />
 
-                <kbd>
-                    ⌘ K
-                </kbd>
+                {searchQuery && (
+                    <button
+                        type="button"
+                        className="search-clear"
+                        onClick={() =>
+                            onSearchChange("")
+                        }
+                        aria-label="Limpar busca"
+                        title="Limpar busca"
+                    >
+                        ×
+                    </button>
+                )}
+
+                {!searchQuery && (
+                    <kbd>
+                        Ctrl K
+                    </kbd>
+                )}
             </div>
 
             <div className="header-actions">
                 <button
                     className="theme-toggle"
+                    type="button"
                     onClick={toggleTheme}
                     aria-label="Alternar tema"
                 >
-                    {theme === "light" ? "☾" : "☀"}
+                    {theme === "light"
+                        ? "☾"
+                        : "☀"}
                 </button>
 
                 <div className="profile">

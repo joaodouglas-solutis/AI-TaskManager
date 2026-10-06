@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useMemo,
+    useState
+} from "react";
 
 import Header from "../components/Header";
 import AIAssistant from "../components/AIAssistant";
@@ -18,7 +22,8 @@ import "./Dashboard.css";
 
 const STATUS_LABELS = {
     [TASK_STATUS.TODO]: "A fazer",
-    [TASK_STATUS.IN_PROGRESS]: "Em andamento",
+    [TASK_STATUS.IN_PROGRESS]:
+        "Em andamento",
     [TASK_STATUS.DONE]: "Concluída"
 };
 
@@ -58,6 +63,16 @@ function formatCurrentDate() {
         .toUpperCase();
 }
 
+function normalizeSearchText(value) {
+    return value
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .toLowerCase();
+}
+
 function Dashboard() {
     const { theme, toggleTheme } =
         useTheme();
@@ -80,6 +95,18 @@ function Dashboard() {
     const [activeFilter, setActiveFilter] =
         useState("ALL");
 
+    const [searchQuery, setSearchQuery] =
+        useState("");
+
+    const [aiSummary, setAiSummary] =
+        useState(null);
+
+    const [isAiLoading, setIsAiLoading] =
+        useState(false);
+
+    const [aiError, setAiError] =
+        useState("");
+
     useEffect(() => {
         let isMounted = true;
 
@@ -92,7 +119,9 @@ function Dashboard() {
                     await taskService.getTasks();
 
                 if (isMounted) {
-                    setTasks(loadedTasks);
+                    setTasks(
+                        loadedTasks
+                    );
                 }
             } catch (requestError) {
                 if (isMounted) {
@@ -115,27 +144,113 @@ function Dashboard() {
         };
     }, []);
 
-    const todoTasks = tasks.filter(
-        (task) =>
-            task.status ===
-            TASK_STATUS.TODO
-    );
+    const loadAiSummary =
+        async () => {
+            try {
+                setIsAiLoading(true);
+                setAiError("");
 
-    const inProgressTasks = tasks.filter(
-        (task) =>
-            task.status ===
-            TASK_STATUS.IN_PROGRESS
-    );
+                const result =
+                    await taskService.getWorkspaceAiSummary();
 
-    const doneTasks = tasks.filter(
-        (task) =>
-            task.status ===
-            TASK_STATUS.DONE
-    );
+                setAiSummary(result);
+            } catch (requestError) {
+                setAiError(
+                    requestError.message ||
+                    "Não foi possível analisar o workspace."
+                );
+            } finally {
+                setIsAiLoading(false);
+            }
+        };
+
+    useEffect(() => {
+        if (isLoading) {
+            return;
+        }
+
+        loadAiSummary();
+    }, [isLoading]);
+
+    const filteredTasks =
+        useMemo(() => {
+            const normalizedQuery =
+                normalizeSearchText(
+                    searchQuery.trim()
+                );
+
+            if (!normalizedQuery) {
+                return tasks;
+            }
+
+            return tasks.filter(
+                (task) => {
+                    const searchableText =
+                        normalizeSearchText(
+                            [
+                                task.title,
+                                task.description
+                            ]
+                                .filter(Boolean)
+                                .join(" ")
+                        );
+
+                    return searchableText.includes(
+                        normalizedQuery
+                    );
+                }
+            );
+        }, [tasks, searchQuery]);
+
+    const subtaskCountByParent =
+        useMemo(() => {
+            return tasks.reduce(
+                (counts, task) => {
+                    if (
+                        task.parentTaskId !=
+                        null
+                    ) {
+                        const parentId =
+                            task.parentTaskId;
+
+                        counts[parentId] =
+                            (counts[parentId] ??
+                                0) + 1;
+                    }
+
+                    return counts;
+                },
+                {}
+            );
+        }, [tasks]);
+
+    const todoTasks =
+        filteredTasks.filter(
+            (task) =>
+                task.status ===
+                TASK_STATUS.TODO
+        );
+
+    const inProgressTasks =
+        filteredTasks.filter(
+            (task) =>
+                task.status ===
+                TASK_STATUS.IN_PROGRESS
+        );
+
+    const doneTasks =
+        filteredTasks.filter(
+            (task) =>
+                task.status ===
+                TASK_STATUS.DONE
+        );
 
     const openTasks =
-        todoTasks.length +
-        inProgressTasks.length;
+        tasks.filter(
+            (task) =>
+                task.status !==
+                TASK_STATUS.DONE
+        ).length;
 
     const boardColumns = [
         {
@@ -164,6 +279,15 @@ function Dashboard() {
                     column.status ===
                     activeFilter
             );
+
+    const focusTask =
+        aiSummary?.focusTaskId
+            ? tasks.find(
+                (task) =>
+                    task.id ===
+                    aiSummary.focusTaskId
+            )
+            : null;
 
     const handleCreateTask =
         async (taskData) => {
@@ -366,6 +490,11 @@ function Dashboard() {
             );
         };
 
+    const handleOpenFocusTask =
+        (task) => {
+            setEditingTask(task);
+        };
+
     if (isLoading) {
         return (
             <main className="app">
@@ -374,6 +503,8 @@ function Dashboard() {
                     toggleTheme={
                         toggleTheme
                     }
+                    searchQuery=""
+                    onSearchChange={() => {}}
                 />
 
                 <section className="hero">
@@ -406,6 +537,8 @@ function Dashboard() {
                     toggleTheme={
                         toggleTheme
                     }
+                    searchQuery=""
+                    onSearchChange={() => {}}
                 />
 
                 <section className="hero">
@@ -427,12 +560,21 @@ function Dashboard() {
         );
     }
 
+    const hasSearch =
+        searchQuery.trim().length > 0;
+
     return (
         <main className="app">
             <Header
                 theme={theme}
                 toggleTheme={
                     toggleTheme
+                }
+                searchQuery={
+                    searchQuery
+                }
+                onSearchChange={
+                    setSearchQuery
                 }
             />
 
@@ -466,7 +608,9 @@ function Dashboard() {
                         className="new-task"
                         type="button"
                         onClick={() =>
-                            setIsModalOpen(true)
+                            setIsModalOpen(
+                                true
+                            )
                         }
                     >
                         <span>+</span>
@@ -495,12 +639,14 @@ function Dashboard() {
                         </div>
 
                         <span className="section-meta">
-                            {tasks.length} no total
+                            {hasSearch
+                                ? `${filteredTasks.length} encontradas`
+                                : `${tasks.length} no total`}
                         </span>
                     </div>
 
                     <div className="focus-list">
-                        {tasks
+                        {filteredTasks
                             .slice(0, 5)
                             .map((task) => (
                                 <div
@@ -561,15 +707,37 @@ function Dashboard() {
                                 </div>
                             ))}
 
-                        {tasks.length === 0 && (
-                            <div className="empty-state">
-                                Nenhuma tarefa por enquanto.
-                            </div>
-                        )}
+                        {filteredTasks.length ===
+                            0 && (
+                                <div className="empty-state">
+                                    {hasSearch
+                                        ? "Nenhuma tarefa encontrada."
+                                        : "Nenhuma tarefa por enquanto."}
+                                </div>
+                            )}
                     </div>
                 </div>
 
-                <AIAssistant />
+                <AIAssistant
+                    summary={
+                        aiSummary?.summary
+                    }
+                    focusTask={
+                        focusTask
+                    }
+                    isLoading={
+                        isAiLoading
+                    }
+                    error={
+                        aiError
+                    }
+                    onRefresh={
+                        loadAiSummary
+                    }
+                    onOpenTask={
+                        handleOpenFocusTask
+                    }
+                />
             </section>
 
             <section className="tasks-section">
@@ -636,6 +804,9 @@ function Dashboard() {
                                 tasks={
                                     column.tasks
                                 }
+                                subtaskCountByParent={
+                                    subtaskCountByParent
+                                }
                                 onAdvanceStatus={
                                     handleAdvanceStatus
                                 }
@@ -652,6 +823,21 @@ function Dashboard() {
                         )
                     )}
                 </div>
+
+                {hasSearch &&
+                    filteredTasks.length ===
+                    0 && (
+                        <div className="search-empty">
+                            <strong>
+                                Nenhuma tarefa encontrada
+                            </strong>
+
+                            <span>
+                                Tente buscar por outro
+                                título ou descrição.
+                            </span>
+                        </div>
+                    )}
             </section>
 
             {isModalOpen && (

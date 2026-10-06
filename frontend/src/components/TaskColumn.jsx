@@ -6,6 +6,7 @@ function TaskColumn({
                         title,
                         status,
                         tasks,
+                        subtaskCountByParent,
                         onAdvanceStatus,
                         onDelete,
                         onEdit,
@@ -73,14 +74,6 @@ function TaskColumn({
                         {tasks.length}
                     </span>
                 </div>
-
-                <button
-                    className="column-action"
-                    type="button"
-                    aria-label={`Adicionar tarefa em ${title}`}
-                >
-                    +
-                </button>
             </div>
 
             <div className="column-content">
@@ -88,6 +81,11 @@ function TaskColumn({
                     <TaskCard
                         key={task.id}
                         task={task}
+                        subtaskCount={
+                            subtaskCountByParent[
+                                task.id
+                                ] ?? 0
+                        }
                         onAdvanceStatus={
                             onAdvanceStatus
                         }

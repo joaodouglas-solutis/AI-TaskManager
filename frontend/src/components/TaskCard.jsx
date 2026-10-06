@@ -5,6 +5,7 @@ import {
 
 function TaskCard({
                       task,
+                      subtaskCount = 0,
                       onAdvanceStatus,
                       onDelete,
                       onEdit,
@@ -24,11 +25,18 @@ function TaskCard({
     const isDone =
         task.status === TASK_STATUS.DONE;
 
+    const isSubtask =
+        task.parentTaskId != null;
+
     return (
         <article
             className={`task-card ${
                 isDone
                     ? "task-card-done"
+                    : ""
+            } ${
+                isSubtask
+                    ? "task-card-subtask"
                     : ""
             }`}
             draggable
@@ -40,24 +48,38 @@ function TaskCard({
             }
         >
             <div className="task-card-top">
-                <button
-                    className={`task-priority ${priorityClass}`}
-                    type="button"
-                    title="Prioridade da tarefa"
-                >
-                    {
-                        priorityLabel[
-                            task.priority
-                            ]
-                    }
-                </button>
+                <div className="task-card-labels">
+                    <button
+                        className={`task-priority ${priorityClass}`}
+                        type="button"
+                        title="Prioridade da tarefa"
+                    >
+                        {
+                            priorityLabel[
+                                task.priority
+                                ]
+                        }
+                    </button>
 
-                <div
-                    style={{
-                        display: "flex",
-                        gap: "4px"
-                    }}
-                >
+                    {isSubtask && (
+                        <span className="task-type">
+                            SUBTAREFA
+                        </span>
+                    )}
+
+                    {!isSubtask &&
+                        subtaskCount > 0 && (
+                            <span className="subtask-count">
+                                {subtaskCount}{" "}
+                                {subtaskCount ===
+                                1
+                                    ? "subtarefa"
+                                    : "subtarefas"}
+                            </span>
+                        )}
+                </div>
+
+                <div className="task-card-actions">
                     <button
                         className="task-menu"
                         type="button"

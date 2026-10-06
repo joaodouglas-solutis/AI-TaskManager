@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
     TASK_STATUS,
@@ -6,6 +6,12 @@ import {
 } from "../types/task";
 
 import taskService from "../services/taskService";
+
+const STATUS_LABELS = {
+    [TASK_STATUS.TODO]: "A fazer",
+    [TASK_STATUS.IN_PROGRESS]: "Em andamento",
+    [TASK_STATUS.DONE]: "Concluída"
+};
 
 const PRIORITY_LABELS = {
     [TASK_PRIORITY.LOW]: "BAIXA",
@@ -61,6 +67,12 @@ function EditTaskModal({
     const [isCreatingSubtasks, setIsCreatingSubtasks] =
         useState(false);
 
+    const [isLoadingSubtasks, setIsLoadingSubtasks] =
+        useState(true);
+
+    const [subtasks, setSubtasks] =
+        useState([]);
+
     const [aiError, setAiError] =
         useState("");
 
@@ -69,6 +81,41 @@ function EditTaskModal({
 
     const [decomposition, setDecomposition] =
         useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadSubtasks() {
+            try {
+                setIsLoadingSubtasks(true);
+
+                const loadedSubtasks =
+                    await taskService.getSubtasks(
+                        task.id
+                    );
+
+                if (isMounted) {
+                    setSubtasks(
+                        loadedSubtasks
+                    );
+                }
+            } catch {
+                if (isMounted) {
+                    setSubtasks([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsLoadingSubtasks(false);
+                }
+            }
+        }
+
+        loadSubtasks();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [task.id]);
 
     const handleImproveWithAi =
         async () => {
@@ -193,13 +240,18 @@ function EditTaskModal({
                         decomposition.subtasks
                     );
 
+                setSubtasks(
+                    (currentSubtasks) => [
+                        ...currentSubtasks,
+                        ...createdTasks
+                    ]
+                );
+
                 onSubtasksCreated(
                     createdTasks
                 );
 
                 setDecomposition(null);
-
-                onClose();
             } catch (error) {
                 setAiError(
                     error.message ||
@@ -268,6 +320,13 @@ function EditTaskModal({
         isDecomposing ||
         isCreatingSubtasks;
 
+    const completedSubtasks =
+        subtasks.filter(
+            (subtask) =>
+                subtask.status ===
+                TASK_STATUS.DONE
+        ).length;
+
     return (
         <div
             className="modal-backdrop"
@@ -335,13 +394,7 @@ function EditTaskModal({
                         />
                     </label>
 
-                    <div
-                        style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "8px"
-                        }}
-                    >
+                    <div className="ai-actions">
                         <button
                             type="button"
                             className="ai-button"
@@ -383,99 +436,118 @@ function EditTaskModal({
                     </div>
 
                     {aiError && (
-                        <p
-                            style={{
-                                marginTop: "-4px",
-                                marginBottom: 0,
-                                color:
-                                    "var(--danger)",
-                                fontSize: "12px"
-                            }}
-                        >
+                        <p className="ai-error">
                             {aiError}
                         </p>
                     )}
 
+                    {subtasks.length > 0 && (
+                        <div className="subtasks-panel">
+                            <div className="subtasks-header">
+                                <div>
+                                    <span className="eyebrow">
+                                        SUBTAREFAS
+                                    </span>
+
+                                    <strong>
+                                        {completedSubtasks}/
+                                        {subtasks.length}{" "}
+                                        concluídas
+                                    </strong>
+                                </div>
+
+                                <span className="subtasks-parent">
+                                    TAREFA-PAI
+                                </span>
+                            </div>
+
+                            <div className="subtasks-list">
+                                {subtasks.map(
+                                    (subtask) => (
+                                        <div
+                                            className="subtask-item"
+                                            key={
+                                                subtask.id
+                                            }
+                                        >
+                                            <div
+                                                className={`subtask-status ${
+                                                    subtask.status ===
+                                                    TASK_STATUS.DONE
+                                                        ? "is-done"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {subtask.status ===
+                                                TASK_STATUS.DONE
+                                                    ? "✓"
+                                                    : "·"}
+                                            </div>
+
+                                            <div className="subtask-content">
+                                                <strong>
+                                                    {
+                                                        subtask.title
+                                                    }
+                                                </strong>
+
+                                                <span>
+                                                    {
+                                                        subtask.description
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            <span
+                                                className={`subtask-state ${
+                                                    subtask.status ===
+                                                    TASK_STATUS.DONE
+                                                        ? "is-done"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {
+                                                    subtask.status ===
+                                                    TASK_STATUS.DONE
+                                                        ? "Concluída"
+                                                        : STATUS_LABELS[
+                                                            subtask.status
+                                                            ]
+                                                }
+                                            </span>
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {isLoadingSubtasks &&
+                        subtasks.length === 0 && (
+                            <div className="subtasks-loading">
+                                Verificando subtarefas...
+                            </div>
+                        )}
+
                     {analysis && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection:
-                                    "column",
-                                gap: "12px",
-                                padding: "16px",
-                                background:
-                                    "var(--accent-soft)",
-                                border:
-                                    "1px solid var(--border)",
-                                borderRadius: "12px"
-                            }}
-                        >
+                        <div className="ai-result-panel">
                             <div>
-                                <span
-                                    className="eyebrow"
-                                    style={{
-                                        marginBottom:
-                                            "5px"
-                                    }}
-                                >
+                                <span className="eyebrow">
                                     ANÁLISE DA IA
                                 </span>
 
-                                <strong
-                                    style={{
-                                        fontSize:
-                                            "15px"
-                                    }}
-                                >
+                                <strong>
                                     Diagnóstico da tarefa
                                 </strong>
                             </div>
 
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns:
-                                        "repeat(3, minmax(0, 1fr))",
-                                    gap: "8px"
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        padding: "10px",
-                                        background:
-                                            "var(--surface)",
-                                        border:
-                                            "1px solid var(--border)",
-                                        borderRadius:
-                                            "9px"
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            display:
-                                                "block",
-                                            marginBottom:
-                                                "4px",
-                                            color:
-                                                "var(--text-soft)",
-                                            fontSize:
-                                                "9px",
-                                            fontWeight:
-                                                "800",
-                                            letterSpacing:
-                                                "0.08em"
-                                        }}
-                                    >
+                            <div className="ai-analysis-grid">
+                                <div className="ai-analysis-item">
+                                    <span>
                                         PRIORIDADE
                                     </span>
 
-                                    <strong
-                                        style={{
-                                            fontSize:
-                                                "13px"
-                                        }}
-                                    >
+                                    <strong>
                                         {
                                             PRIORITY_LABELS[
                                                 analysis.priority
@@ -485,42 +557,12 @@ function EditTaskModal({
                                     </strong>
                                 </div>
 
-                                <div
-                                    style={{
-                                        padding: "10px",
-                                        background:
-                                            "var(--surface)",
-                                        border:
-                                            "1px solid var(--border)",
-                                        borderRadius:
-                                            "9px"
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            display:
-                                                "block",
-                                            marginBottom:
-                                                "4px",
-                                            color:
-                                                "var(--text-soft)",
-                                            fontSize:
-                                                "9px",
-                                            fontWeight:
-                                                "800",
-                                            letterSpacing:
-                                                "0.08em"
-                                        }}
-                                    >
+                                <div className="ai-analysis-item">
+                                    <span>
                                         COMPLEXIDADE
                                     </span>
 
-                                    <strong
-                                        style={{
-                                            fontSize:
-                                                "13px"
-                                        }}
-                                    >
+                                    <strong>
                                         {
                                             COMPLEXITY_LABELS[
                                                 analysis.complexity
@@ -530,42 +572,12 @@ function EditTaskModal({
                                     </strong>
                                 </div>
 
-                                <div
-                                    style={{
-                                        padding: "10px",
-                                        background:
-                                            "var(--surface)",
-                                        border:
-                                            "1px solid var(--border)",
-                                        borderRadius:
-                                            "9px"
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            display:
-                                                "block",
-                                            marginBottom:
-                                                "4px",
-                                            color:
-                                                "var(--text-soft)",
-                                            fontSize:
-                                                "9px",
-                                            fontWeight:
-                                                "800",
-                                            letterSpacing:
-                                                "0.08em"
-                                        }}
-                                    >
+                                <div className="ai-analysis-item">
+                                    <span>
                                         ESFORÇO
                                     </span>
 
-                                    <strong
-                                        style={{
-                                            fontSize:
-                                                "13px"
-                                        }}
-                                    >
+                                    <strong>
                                         {
                                             analysis.estimatedHours
                                         }{" "}
@@ -579,37 +591,12 @@ function EditTaskModal({
                                 </div>
                             </div>
 
-                            <div>
-                                <span
-                                    style={{
-                                        display:
-                                            "block",
-                                        marginBottom:
-                                            "5px",
-                                        color:
-                                            "var(--text-soft)",
-                                        fontSize:
-                                            "9px",
-                                        fontWeight:
-                                            "800",
-                                        letterSpacing:
-                                            "0.08em"
-                                    }}
-                                >
+                            <div className="ai-reason">
+                                <span>
                                     JUSTIFICATIVA
                                 </span>
 
-                                <p
-                                    style={{
-                                        margin: 0,
-                                        color:
-                                            "var(--text)",
-                                        fontSize:
-                                            "12px",
-                                        lineHeight:
-                                            "1.5"
-                                    }}
-                                >
+                                <p>
                                     {
                                         analysis.reason
                                     }
@@ -620,16 +607,10 @@ function EditTaskModal({
                                 priority && (
                                     <button
                                         type="button"
-                                        className="modal-submit"
+                                        className="modal-submit ai-apply-button"
                                         onClick={
                                             handleApplySuggestedPriority
                                         }
-                                        style={{
-                                            alignSelf:
-                                                "flex-start",
-                                            fontSize:
-                                                "12px"
-                                        }}
                                     >
                                         Usar prioridade sugerida
                                     </button>
@@ -638,37 +619,13 @@ function EditTaskModal({
                     )}
 
                     {decomposition && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection:
-                                    "column",
-                                gap: "12px",
-                                padding: "16px",
-                                background:
-                                    "var(--accent-soft)",
-                                border:
-                                    "1px solid var(--border)",
-                                borderRadius: "12px"
-                            }}
-                        >
+                        <div className="ai-result-panel">
                             <div>
-                                <span
-                                    className="eyebrow"
-                                    style={{
-                                        marginBottom:
-                                            "5px"
-                                    }}
-                                >
+                                <span className="eyebrow">
                                     DECOMPOSIÇÃO DA IA
                                 </span>
 
-                                <strong
-                                    style={{
-                                        fontSize:
-                                            "15px"
-                                    }}
-                                >
+                                <strong>
                                     {
                                         decomposition
                                             .subtasks
@@ -678,43 +635,17 @@ function EditTaskModal({
                                 </strong>
                             </div>
 
-                            <div
-                                style={{
-                                    display:
-                                        "flex",
-                                    flexDirection:
-                                        "column",
-                                    gap: "8px"
-                                }}
-                            >
+                            <div className="decomposition-list">
                                 {decomposition.subtasks.map(
                                     (
                                         subtask,
                                         index
                                     ) => (
                                         <div
+                                            className="decomposition-item"
                                             key={`${subtask.title}-${index}`}
-                                            style={{
-                                                padding:
-                                                    "12px",
-                                                background:
-                                                    "var(--surface)",
-                                                border:
-                                                    "1px solid var(--border)",
-                                                borderRadius:
-                                                    "9px"
-                                            }}
                                         >
-                                            <strong
-                                                style={{
-                                                    display:
-                                                        "block",
-                                                    marginBottom:
-                                                        "4px",
-                                                    fontSize:
-                                                        "13px"
-                                                }}
-                                            >
+                                            <strong>
                                                 {index +
                                                     1}
                                                 .{" "}
@@ -723,17 +654,7 @@ function EditTaskModal({
                                                 }
                                             </strong>
 
-                                            <p
-                                                style={{
-                                                    margin: 0,
-                                                    color:
-                                                        "var(--text-soft)",
-                                                    fontSize:
-                                                        "11px",
-                                                    lineHeight:
-                                                        "1.45"
-                                                }}
-                                            >
+                                            <p>
                                                 {
                                                     subtask.description
                                                 }
@@ -745,19 +666,13 @@ function EditTaskModal({
 
                             <button
                                 type="button"
-                                className="modal-submit"
+                                className="modal-submit ai-apply-button"
                                 onClick={
                                     handleCreateSubtasks
                                 }
                                 disabled={
                                     isCreatingSubtasks
                                 }
-                                style={{
-                                    alignSelf:
-                                        "flex-start",
-                                    fontSize:
-                                        "12px"
-                                }}
                             >
                                 {isCreatingSubtasks
                                     ? "Criando subtarefas..."

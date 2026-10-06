@@ -121,6 +121,13 @@ async function getSubtasks(
     return subtasks.map(normalizeTask);
 }
 
+async function getWorkspaceAiSummary() {
+    return apiClient.post(
+        `${TASKS_ENDPOINT}/ai/summary`,
+        {}
+    );
+}
+
 const taskService = {
     getTasks,
     createTask,
@@ -130,7 +137,8 @@ const taskService = {
     analyzeTask,
     decomposeTask,
     createSubtasks,
-    getSubtasks
+    getSubtasks,
+    getWorkspaceAiSummary
 };
 
 export default taskService;
