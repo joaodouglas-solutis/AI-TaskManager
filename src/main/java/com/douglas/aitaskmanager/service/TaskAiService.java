@@ -4,6 +4,9 @@ import com.douglas.aitaskmanager.ai.TaskAiClient;
 import com.douglas.aitaskmanager.ai.TaskAiResponseValidator;
 import com.douglas.aitaskmanager.ai.TaskDecompositionValidator;
 import com.douglas.aitaskmanager.ai.WorkspaceAiSummaryValidator;
+import com.douglas.aitaskmanager.dto.AiChatMessage;
+import com.douglas.aitaskmanager.dto.AiChatRequest;
+import com.douglas.aitaskmanager.dto.AiChatResponse;
 import com.douglas.aitaskmanager.dto.ImprovedTaskResponse;
 import com.douglas.aitaskmanager.dto.TaskAnalysisResponse;
 import com.douglas.aitaskmanager.dto.TaskDecompositionResponse;
@@ -17,6 +20,10 @@ import java.util.List;
 
 @Service
 public class TaskAiService {
+
+    private static final int MAX_HISTORY_MESSAGES = 6;
+    private static final int MAX_HISTORY_MESSAGE_LENGTH = 400;
+    private static final int MAX_CHAT_DESCRIPTION_LENGTH = 180;
 
     private final TaskRepository taskRepository;
     private final TaskAiClient taskAiClient;
@@ -143,7 +150,69 @@ public class TaskAiService {
         return response;
     }
 
-    private String toAiContext(Task task) {
+    public AiChatResponse chat(
+            AiChatRequest request
+    ) {
+
+        List<Task> tasks =
+                taskRepository.findAll();
+
+        List<String> taskContexts =
+                tasks.stream()
+                        .map(this::toChatContext)
+                        .toList();
+
+        List<AiChatMessage> history =
+                request.history() == null
+                        ? List.of()
+                        : request.history();
+
+        history =
+                compactHistory(history);
+
+        return taskAiClient.chat(
+                request.message().trim(),
+                history,
+                taskContexts
+        );
+    }
+
+    private List<AiChatMessage> compactHistory(
+            List<AiChatMessage> history
+    ) {
+
+        if (history.isEmpty()) {
+            return List.of();
+        }
+
+        int startIndex =
+                Math.max(
+                        0,
+                        history.size() -
+                                MAX_HISTORY_MESSAGES
+                );
+
+        return history
+                .subList(
+                        startIndex,
+                        history.size()
+                )
+                .stream()
+                .map(message ->
+                        new AiChatMessage(
+                                message.role(),
+                                truncate(
+                                        message.content(),
+                                        MAX_HISTORY_MESSAGE_LENGTH
+                                )
+                        )
+                )
+                .toList();
+    }
+
+    private String toAiContext(
+            Task task
+    ) {
 
         return """
                 ID: %d
@@ -168,5 +237,57 @@ public class TaskAiService {
                         ? "nenhuma"
                         : task.getParentTask().getId()
         );
+    }
+
+    private String toChatContext(
+            Task task
+    ) {
+
+        String description =
+                task.getDescription() == null
+                        ? ""
+                        : truncate(
+                        task.getDescription(),
+                        MAX_CHAT_DESCRIPTION_LENGTH
+                );
+
+        return """
+                Tarefa:
+                título=%s
+                status=%s
+                prioridade=%s
+                prazo=%s
+                descrição=%s
+                """.formatted(
+                task.getTitle(),
+                task.getStatus().name(),
+                task.getPriority().name(),
+                task.getDueDate() == null
+                        ? "sem prazo"
+                        : task.getDueDate(),
+                description
+        );
+    }
+
+    private String truncate(
+            String value,
+            int maxLength
+    ) {
+
+        if (value == null) {
+            return "";
+        }
+
+        String normalizedValue =
+                value.trim();
+
+        if (normalizedValue.length() <= maxLength) {
+            return normalizedValue;
+        }
+
+        return normalizedValue.substring(
+                0,
+                maxLength
+        ) + "...";
     }
 }

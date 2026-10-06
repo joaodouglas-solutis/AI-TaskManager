@@ -1,10 +1,13 @@
 package com.douglas.aitaskmanager.controller;
 
+import com.douglas.aitaskmanager.dto.AiChatRequest;
+import com.douglas.aitaskmanager.dto.AiChatResponse;
 import com.douglas.aitaskmanager.dto.ImprovedTaskResponse;
 import com.douglas.aitaskmanager.dto.TaskAnalysisResponse;
 import com.douglas.aitaskmanager.dto.TaskDecompositionResponse;
 import com.douglas.aitaskmanager.dto.WorkspaceAiSummaryResponse;
 import com.douglas.aitaskmanager.service.TaskAiService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,6 +55,15 @@ public class TaskAiController {
     public ResponseEntity<WorkspaceAiSummaryResponse> summarizeWorkspace() {
         return ResponseEntity.ok(
                 taskAiService.summarizeWorkspace()
+        );
+    }
+
+    @PostMapping("/ai/chat")
+    public ResponseEntity<AiChatResponse> chat(
+            @Valid @RequestBody AiChatRequest request
+    ) {
+        return ResponseEntity.ok(
+                taskAiService.chat(request)
         );
     }
 }

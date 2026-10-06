@@ -1,26 +1,37 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5433/taskmanager
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:1234}
 
-  jpa:
-    hibernate:
-      ddl-auto: update
+  spring:
+    datasource:
+      url: jdbc:postgresql://localhost:5433/taskmanager
+      username: ${DB_USERNAME:postgres}
+      password: ${DB_PASSWORD:1234}
 
-    show-sql: true
-
-    properties:
+    jpa:
       hibernate:
-        format_sql: true
+        ddl-auto: update
 
-  ai:
-    model:
-      chat: ollama
+      show-sql: true
 
-    ollama:
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      properties:
+        hibernate:
+          format_sql: true
 
-      chat:
-        model: ${OLLAMA_MODEL:qwen2.5:3b}
-        temperature: 0.2
+    ai:
+      model:
+        chat: ollama
+
+      ollama:
+        base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+
+        chat:
+          model: ${OLLAMA_MODEL:qwen2.5:3b}
+
+          # Mantém o modelo carregado na memória por 30 minutos.
+          # Isso evita recarregar o Qwen entre chamadas próximas.
+          keep-alive: 30m
+
+          # Limita o tamanho máximo das respostas.
+          # Ajuda a reduzir o tempo de geração.
+          num-predict: 512
+
+          temperature: 0.2
+

@@ -128,6 +128,19 @@ async function getWorkspaceAiSummary() {
     );
 }
 
+async function chat(
+    message,
+    history = []
+) {
+    return apiClient.post(
+        `${TASKS_ENDPOINT}/ai/chat`,
+        {
+            message,
+            history
+        }
+    );
+}
+
 const taskService = {
     getTasks,
     createTask,
@@ -138,7 +151,8 @@ const taskService = {
     decomposeTask,
     createSubtasks,
     getSubtasks,
-    getWorkspaceAiSummary
+    getWorkspaceAiSummary,
+    chat
 };
 
 export default taskService;

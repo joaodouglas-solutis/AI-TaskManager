@@ -1,5 +1,7 @@
 package com.douglas.aitaskmanager.ai;
 
+import com.douglas.aitaskmanager.dto.AiChatMessage;
+import com.douglas.aitaskmanager.dto.AiChatResponse;
 import com.douglas.aitaskmanager.dto.ImprovedTaskResponse;
 import com.douglas.aitaskmanager.dto.TaskAnalysisResponse;
 import com.douglas.aitaskmanager.dto.TaskDecompositionResponse;
@@ -27,6 +29,12 @@ public interface TaskAiClient {
     );
 
     WorkspaceAiSummaryResponse summarizeWorkspace(
+            List<String> taskContexts
+    );
+
+    AiChatResponse chat(
+            String message,
+            List<AiChatMessage> history,
             List<String> taskContexts
     );
 }
