@@ -2,6 +2,7 @@ package com.douglas.aitaskmanager.ai;
 
 import com.douglas.aitaskmanager.dto.WorkspaceAiSummaryResponse;
 import com.douglas.aitaskmanager.entity.Task;
+import com.douglas.aitaskmanager.exception.AiResponseValidationException;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,7 +16,7 @@ public class WorkspaceAiSummaryValidator {
     ) {
 
         if (response == null) {
-            throw new IllegalArgumentException(
+            throw new AiResponseValidationException(
                     "A IA não retornou um resumo do workspace."
             );
         }
@@ -23,7 +24,7 @@ public class WorkspaceAiSummaryValidator {
         if (response.summary() == null
                 || response.summary().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new AiResponseValidationException(
                     "O resumo retornado pela IA está vazio."
             );
         }
@@ -31,7 +32,7 @@ public class WorkspaceAiSummaryValidator {
         if (response.focusReason() == null
                 || response.focusReason().isBlank()) {
 
-            throw new IllegalArgumentException(
+            throw new AiResponseValidationException(
                     "A justificativa do foco retornada pela IA está vazia."
             );
         }
@@ -42,15 +43,16 @@ public class WorkspaceAiSummaryValidator {
 
         boolean taskExists =
                 tasks.stream()
-                        .anyMatch(task ->
-                                task.getId()
-                                        .equals(
-                                                response.focusTaskId()
-                                        )
+                        .anyMatch(
+                                task ->
+                                        task.getId()
+                                                .equals(
+                                                        response.focusTaskId()
+                                                )
                         );
 
         if (!taskExists) {
-            throw new IllegalArgumentException(
+            throw new AiResponseValidationException(
                     "A IA indicou uma tarefa que não existe no workspace."
             );
         }
