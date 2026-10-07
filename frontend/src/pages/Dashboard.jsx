@@ -53,6 +53,17 @@ const FILTERS = [
     }
 ];
 
+const AI_PROVIDERS = {
+    GEMINI: {
+        label: "Gemini",
+        icon: "✦"
+    },
+    OLLAMA: {
+        label: "Ollama",
+        icon: "◉"
+    }
+};
+
 function formatCurrentDate() {
     return new Intl.DateTimeFormat("pt-BR", {
         weekday: "long",
@@ -108,6 +119,36 @@ function Dashboard() {
     const [aiError, setAiError] =
         useState("");
 
+    const [provider, setProvider] =
+        useState("GEMINI");
+
+    const loadAiSummary =
+        useCallback(
+            async (
+                selectedProvider = provider
+            ) => {
+                try {
+                    setIsAiLoading(true);
+                    setAiError("");
+
+                    const result =
+                        await taskService.getWorkspaceAiSummary(
+                            selectedProvider
+                        );
+
+                    setAiSummary(result);
+                } catch (requestError) {
+                    setAiError(
+                        requestError.message ||
+                        "Não foi possível analisar o workspace."
+                    );
+                } finally {
+                    setIsAiLoading(false);
+                }
+            },
+            [provider]
+        );
+
     useEffect(() => {
         let isMounted = true;
 
@@ -145,32 +186,27 @@ function Dashboard() {
         };
     }, []);
 
-    const loadAiSummary =
+    useEffect(() => {
+        loadAiSummary(provider);
+    }, [provider, loadAiSummary]);
+
+    const handleProviderChange =
         useCallback(
-            async () => {
-                try {
-                    setIsAiLoading(true);
-                    setAiError("");
-
-                    const result =
-                        await taskService.getWorkspaceAiSummary();
-
-                    setAiSummary(result);
-                } catch (requestError) {
-                    setAiError(
-                        requestError.message ||
-                        "Não foi possível analisar o workspace."
-                    );
-                } finally {
-                    setIsAiLoading(false);
+            (selectedProvider) => {
+                if (
+                    !AI_PROVIDERS[
+                        selectedProvider
+                        ]
+                ) {
+                    return;
                 }
+
+                setProvider(
+                    selectedProvider
+                );
             },
             []
         );
-
-    useEffect(() => {
-        loadAiSummary();
-    }, [loadAiSummary]);
 
     const filteredTasks =
         useMemo(() => {
@@ -563,6 +599,10 @@ function Dashboard() {
     const hasSearch =
         searchQuery.trim().length > 0;
 
+    const selectedProvider =
+        AI_PROVIDERS[provider] ||
+        AI_PROVIDERS.GEMINI;
+
     return (
         <main className="app">
             <Header
@@ -594,6 +634,163 @@ function Dashboard() {
                 </div>
 
                 <div className="hero-action">
+                    <div
+                        style={{
+                            display:
+                                "flex",
+                            alignItems:
+                                "center",
+                            gap:
+                                "10px",
+                            padding:
+                                "8px 10px",
+                            background:
+                                "rgba(255, 255, 255, 0.06)",
+                            border:
+                                "1px solid rgba(255, 255, 255, 0.1)",
+                            borderRadius:
+                                "10px"
+                        }}
+                    >
+                        <div
+                            style={{
+                                display:
+                                    "flex",
+                                flexDirection:
+                                    "column",
+                                gap:
+                                    "2px"
+                            }}
+                        >
+                            <span
+                                style={{
+                                    color:
+                                        "rgba(245, 246, 239, 0.45)",
+                                    fontSize:
+                                        "8px",
+                                    fontWeight:
+                                        "800",
+                                    letterSpacing:
+                                        "0.1em"
+                                }}
+                            >
+                                IA DO WORKSPACE
+                            </span>
+
+                            <span
+                                style={{
+                                    color:
+                                        "rgba(245, 246, 239, 0.72)",
+                                    fontSize:
+                                        "10px"
+                                }}
+                            >
+                                Escolha quem responde
+                            </span>
+                        </div>
+
+                        <div
+                            style={{
+                                display:
+                                    "flex",
+                                gap:
+                                    "4px",
+                                padding:
+                                    "3px",
+                                background:
+                                    "rgba(0, 0, 0, 0.18)",
+                                border:
+                                    "1px solid rgba(255, 255, 255, 0.08)",
+                                borderRadius:
+                                    "9px"
+                            }}
+                        >
+                            {Object.entries(
+                                AI_PROVIDERS
+                            ).map(
+                                ([
+                                     providerKey,
+                                     providerInfo
+                                 ]) => {
+
+                                    const isSelected =
+                                        provider ===
+                                        providerKey;
+
+                                    return (
+                                        <button
+                                            key={
+                                                providerKey
+                                            }
+                                            type="button"
+                                            onClick={() =>
+                                                handleProviderChange(
+                                                    providerKey
+                                                )
+                                            }
+                                            disabled={
+                                                isAiLoading
+                                            }
+                                            aria-pressed={
+                                                isSelected
+                                            }
+                                            title={`Usar ${providerInfo.label} para as operações de IA`}
+                                            style={{
+                                                display:
+                                                    "flex",
+                                                alignItems:
+                                                    "center",
+                                                gap:
+                                                    "5px",
+                                                padding:
+                                                    "6px 9px",
+                                                background:
+                                                    isSelected
+                                                        ? "#f5f6ef"
+                                                        : "transparent",
+                                                border:
+                                                    "none",
+                                                borderRadius:
+                                                    "7px",
+                                                color:
+                                                    isSelected
+                                                        ? "#171815"
+                                                        : "rgba(245, 246, 239, 0.6)",
+                                                fontSize:
+                                                    "10px",
+                                                fontWeight:
+                                                    isSelected
+                                                        ? "800"
+                                                        : "600",
+                                                cursor:
+                                                    isAiLoading
+                                                        ? "not-allowed"
+                                                        : "pointer",
+                                                opacity:
+                                                    isAiLoading &&
+                                                    !isSelected
+                                                        ? 0.5
+                                                        : 1,
+                                                transition:
+                                                    "all 0.2s ease"
+                                            }}
+                                        >
+                                            <span>
+                                                {
+                                                    providerInfo.icon
+                                                }
+                                            </span>
+
+                                            {
+                                                providerInfo.label
+                                            }
+                                        </button>
+                                    );
+                                }
+                            )}
+                        </div>
+                    </div>
+
                     <div className="hero-summary">
                         <strong>
                             {openTasks}
@@ -731,8 +928,14 @@ function Dashboard() {
                     error={
                         aiError
                     }
+                    provider={
+                        provider
+                    }
                     onRefresh={
-                        loadAiSummary
+                        () =>
+                            loadAiSummary(
+                                provider
+                            )
                     }
                     onOpenTask={
                         handleOpenFocusTask
@@ -807,6 +1010,9 @@ function Dashboard() {
                                 subtaskCountByParent={
                                     subtaskCountByParent
                                 }
+                                provider={
+                                    provider
+                                }
                                 onAdvanceStatus={
                                     handleAdvanceStatus
                                 }
@@ -854,6 +1060,9 @@ function Dashboard() {
             {editingTask && (
                 <EditTaskModal
                     task={editingTask}
+                    provider={
+                        provider
+                    }
                     onClose={() =>
                         setEditingTask(null)
                     }

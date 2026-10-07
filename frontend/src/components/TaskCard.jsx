@@ -9,7 +9,8 @@ function TaskCard({
                       onAdvanceStatus,
                       onDelete,
                       onEdit,
-                      onDragStart
+                      onDragStart,
+                      provider
                   }) {
     const priorityLabel = {
         [TASK_PRIORITY.LOW]: "BAIXA",

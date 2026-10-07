@@ -1,3 +1,7 @@
+app:
+  ai:
+    default-provider: ${AI_DEFAULT_PROVIDER:GEMINI}
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/taskmanager
@@ -16,22 +20,25 @@ spring:
 
   ai:
     model:
-      chat: ollama
+      chat: google-genai
+
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+
+        chat:
+          model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+          temperature: 0.1
+          max-output-tokens: 256
 
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
 
       chat:
         model: ${OLLAMA_MODEL:qwen2.5:3b}
-
-        # Mantém o modelo carregado entre as requisições.
         keep-alive: 30m
-
-        # Fallback caso alguma operação não configure
-        # parâmetros específicos.
         num-predict: 128
         num-ctx: 2048
         num-batch: 512
         num-thread: 6
-
         temperature: 0.1

@@ -9,6 +9,7 @@ import com.douglas.aitaskmanager.dto.WorkspaceAiSummaryResponse;
 import com.douglas.aitaskmanager.exception.AiIntegrationException;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -39,10 +40,10 @@ public class OllamaTaskAiClient implements TaskAiClient {
     private final ChatClient chatClient;
 
     public OllamaTaskAiClient(
-            ChatClient.Builder chatClientBuilder
+            @Qualifier("ollamaChatClient")
+            ChatClient chatClient
     ) {
-        this.chatClient =
-                chatClientBuilder.build();
+        this.chatClient = chatClient;
     }
 
     @Override
@@ -50,7 +51,6 @@ public class OllamaTaskAiClient implements TaskAiClient {
             String title,
             String description
     ) {
-
         String prompt = """
                 Melhore a tarefa abaixo.
 
@@ -67,9 +67,7 @@ public class OllamaTaskAiClient implements TaskAiClient {
                 </tarefa>
                 """.formatted(
                 title,
-                description == null
-                        ? ""
-                        : description
+                description == null ? "" : description
         );
 
         try {
@@ -111,7 +109,6 @@ public class OllamaTaskAiClient implements TaskAiClient {
             String status,
             String priority
     ) {
-
         String prompt = """
                 Analise a tarefa abaixo.
 
@@ -131,9 +128,7 @@ public class OllamaTaskAiClient implements TaskAiClient {
                 </tarefa>
                 """.formatted(
                 title,
-                description == null
-                        ? ""
-                        : description,
+                description == null ? "" : description,
                 status,
                 priority
         );
@@ -175,7 +170,6 @@ public class OllamaTaskAiClient implements TaskAiClient {
             String title,
             String description
     ) {
-
         String prompt = """
                 Divida a tarefa abaixo em subtarefas.
 
@@ -193,9 +187,7 @@ public class OllamaTaskAiClient implements TaskAiClient {
                 </tarefa>
                 """.formatted(
                 title,
-                description == null
-                        ? ""
-                        : description
+                description == null ? "" : description
         );
 
         try {
@@ -234,7 +226,6 @@ public class OllamaTaskAiClient implements TaskAiClient {
     public WorkspaceAiSummaryResponse summarizeWorkspace(
             List<String> taskContexts
     ) {
-
         String prompt = """
                 Analise o workspace abaixo e escreva um resumo curto e útil.
 
@@ -301,10 +292,8 @@ public class OllamaTaskAiClient implements TaskAiClient {
             List<AiChatMessage> history,
             List<String> taskContexts
     ) {
-
         String historyText =
-                history == null ||
-                        history.isEmpty()
+                history == null || history.isEmpty()
                         ? "Nenhuma mensagem anterior."
                         : history.stream()
                         .map(item ->
@@ -388,10 +377,7 @@ public class OllamaTaskAiClient implements TaskAiClient {
                             .call()
                             .content();
 
-            if (
-                    answer == null ||
-                            answer.isBlank()
-            ) {
+            if (answer == null || answer.isBlank()) {
                 throw new IllegalArgumentException(
                         "A IA não retornou uma resposta."
                 );
@@ -414,7 +400,6 @@ public class OllamaTaskAiClient implements TaskAiClient {
             int numPredict,
             double temperature
     ) {
-
         return OllamaChatOptions
                 .builder()
                 .numCtx(numCtx)

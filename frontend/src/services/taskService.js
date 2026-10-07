@@ -67,24 +67,39 @@ async function deleteTask(taskId) {
     return true;
 }
 
-async function improveTask(taskId) {
+async function improveTask(
+    taskId,
+    provider = "GEMINI"
+) {
     return apiClient.post(
         `${TASKS_ENDPOINT}/${taskId}/ai/improve`,
-        {}
+        {
+            provider
+        }
     );
 }
 
-async function analyzeTask(taskId) {
+async function analyzeTask(
+    taskId,
+    provider = "GEMINI"
+) {
     return apiClient.post(
         `${TASKS_ENDPOINT}/${taskId}/ai/analyze`,
-        {}
+        {
+            provider
+        }
     );
 }
 
-async function decomposeTask(taskId) {
+async function decomposeTask(
+    taskId,
+    provider = "GEMINI"
+) {
     return apiClient.post(
         `${TASKS_ENDPOINT}/${taskId}/ai/decompose`,
-        {}
+        {
+            provider
+        }
     );
 }
 
@@ -121,22 +136,28 @@ async function getSubtasks(
     return subtasks.map(normalizeTask);
 }
 
-async function getWorkspaceAiSummary() {
+async function getWorkspaceAiSummary(
+    provider = "GEMINI"
+) {
     return apiClient.post(
         `${TASKS_ENDPOINT}/ai/summary`,
-        {}
+        {
+            provider
+        }
     );
 }
 
 async function chat(
     message,
-    history = []
+    history = [],
+    provider = "GEMINI"
 ) {
     return apiClient.post(
         `${TASKS_ENDPOINT}/ai/chat`,
         {
             message,
-            history
+            history,
+            provider
         }
     );
 }

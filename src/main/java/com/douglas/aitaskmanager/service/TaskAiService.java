@@ -1,9 +1,10 @@
 package com.douglas.aitaskmanager.service;
 
-import com.douglas.aitaskmanager.ai.TaskAiClient;
+import com.douglas.aitaskmanager.ai.AiProviderRouter;
 import com.douglas.aitaskmanager.ai.TaskAiResponseValidator;
 import com.douglas.aitaskmanager.ai.TaskDecompositionValidator;
 import com.douglas.aitaskmanager.ai.WorkspaceAiSummaryValidator;
+import com.douglas.aitaskmanager.ai.AiProvider;
 import com.douglas.aitaskmanager.dto.AiChatMessage;
 import com.douglas.aitaskmanager.dto.AiChatRequest;
 import com.douglas.aitaskmanager.dto.AiChatResponse;
@@ -36,27 +37,28 @@ public class TaskAiService {
     private static final int MAX_CHAT_TASKS = 16;
 
     private final TaskRepository taskRepository;
-    private final TaskAiClient taskAiClient;
+    private final AiProviderRouter aiProviderRouter;
     private final TaskAiResponseValidator taskAiResponseValidator;
     private final TaskDecompositionValidator taskDecompositionValidator;
     private final WorkspaceAiSummaryValidator workspaceAiSummaryValidator;
 
     public TaskAiService(
             TaskRepository taskRepository,
-            TaskAiClient taskAiClient,
+            AiProviderRouter aiProviderRouter,
             TaskAiResponseValidator taskAiResponseValidator,
             TaskDecompositionValidator taskDecompositionValidator,
             WorkspaceAiSummaryValidator workspaceAiSummaryValidator
     ) {
         this.taskRepository = taskRepository;
-        this.taskAiClient = taskAiClient;
+        this.aiProviderRouter = aiProviderRouter;
         this.taskAiResponseValidator = taskAiResponseValidator;
         this.taskDecompositionValidator = taskDecompositionValidator;
         this.workspaceAiSummaryValidator = workspaceAiSummaryValidator;
     }
 
     public ImprovedTaskResponse improveTask(
-            Long taskId
+            Long taskId,
+            AiProvider provider
     ) {
 
         Task task =
@@ -66,14 +68,16 @@ public class TaskAiService {
                                         new TaskNotFoundException(taskId)
                         );
 
-        return taskAiClient.improveTask(
+        return aiProviderRouter.improveTask(
+                provider,
                 task.getTitle(),
                 task.getDescription()
         );
     }
 
     public TaskAnalysisResponse analyzeTask(
-            Long taskId
+            Long taskId,
+            AiProvider provider
     ) {
 
         Task task =
@@ -84,7 +88,8 @@ public class TaskAiService {
                         );
 
         TaskAnalysisResponse analysis =
-                taskAiClient.analyzeTask(
+                aiProviderRouter.analyzeTask(
+                        provider,
                         task.getTitle(),
                         task.getDescription(),
                         task.getStatus().name(),
@@ -99,7 +104,8 @@ public class TaskAiService {
     }
 
     public TaskDecompositionResponse decomposeTask(
-            Long taskId
+            Long taskId,
+            AiProvider provider
     ) {
 
         Task task =
@@ -110,7 +116,8 @@ public class TaskAiService {
                         );
 
         TaskDecompositionResponse response =
-                taskAiClient.decomposeTask(
+                aiProviderRouter.decomposeTask(
+                        provider,
                         task.getTitle(),
                         task.getDescription()
                 );
@@ -122,7 +129,9 @@ public class TaskAiService {
         return response;
     }
 
-    public WorkspaceAiSummaryResponse summarizeWorkspace() {
+    public WorkspaceAiSummaryResponse summarizeWorkspace(
+            AiProvider provider
+    ) {
 
         List<Task> tasks =
                 taskRepository.findAll();
@@ -133,7 +142,8 @@ public class TaskAiService {
                         .toList();
 
         WorkspaceAiSummaryResponse response =
-                taskAiClient.summarizeWorkspace(
+                aiProviderRouter.summarizeWorkspace(
+                        provider,
                         taskContexts
                 );
 
@@ -171,7 +181,8 @@ public class TaskAiService {
                         message
                 );
 
-        return taskAiClient.chat(
+        return aiProviderRouter.chat(
+                request.provider(),
                 message,
                 history,
                 taskContexts
@@ -765,4 +776,3 @@ public class TaskAiService {
         ) + "...";
     }
 }
-

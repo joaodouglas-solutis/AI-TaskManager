@@ -10,13 +10,19 @@ const SUGGESTIONS = [
     "Tenho tarefas atrasadas?"
 ];
 
+const AI_PROVIDER_LABELS = {
+    GEMINI: "Gemini",
+    OLLAMA: "Ollama"
+};
+
 function AIAssistant({
                          summary,
                          focusTask,
                          isLoading,
                          error,
                          onRefresh,
-                         onOpenTask
+                         onOpenTask,
+                         provider
                      }) {
 
     const [
@@ -106,7 +112,8 @@ function AIAssistant({
                 const response =
                     await taskService.chat(
                         trimmedMessage,
-                        history
+                        history,
+                        provider
                     );
 
                 setMessages(
@@ -154,6 +161,10 @@ function AIAssistant({
                 );
             }
         };
+
+    const providerLabel =
+        AI_PROVIDER_LABELS[provider] ||
+        AI_PROVIDER_LABELS.GEMINI;
 
     return (
         <div className="ai-panel panel">
@@ -358,19 +369,42 @@ function AIAssistant({
                             justifyContent:
                                 "space-between",
                             marginBottom:
-                                "14px"
+                                "12px"
                         }}
                     >
-                        <span
+                        <div
                             style={{
-                                color:
-                                    "rgba(245, 246, 239, 0.7)",
-                                fontSize:
-                                    "11px"
+                                display:
+                                    "flex",
+                                flexDirection:
+                                    "column",
+                                gap:
+                                    "3px"
                             }}
                         >
-                            Pergunte sobre suas tarefas.
-                        </span>
+                            <span
+                                style={{
+                                    color:
+                                        "rgba(245, 246, 239, 0.7)",
+                                    fontSize:
+                                        "11px"
+                                }}
+                            >
+                                Pergunte sobre suas tarefas.
+                            </span>
+
+                            <span
+                                style={{
+                                    color:
+                                        "rgba(245, 246, 239, 0.4)",
+                                    fontSize:
+                                        "9px"
+                                }}
+                            >
+                                Respondendo com{" "}
+                                {providerLabel}
+                            </span>
+                        </div>
 
                         <button
                             type="button"
@@ -553,7 +587,8 @@ function AIAssistant({
                                         "12px"
                                 }}
                             >
-                                Pensando...
+                                Pensando com{" "}
+                                {providerLabel}...
                             </div>
                         )}
                     </div>

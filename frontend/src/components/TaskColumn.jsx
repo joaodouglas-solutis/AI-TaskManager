@@ -10,7 +10,8 @@ function TaskColumn({
                         onAdvanceStatus,
                         onDelete,
                         onEdit,
-                        onMoveTask
+                        onMoveTask,
+                        provider
                     }) {
     const [isDragOver, setIsDragOver] =
         useState(false);
@@ -92,7 +93,12 @@ function TaskColumn({
                         onDelete={
                             onDelete
                         }
-                        onEdit={onEdit}
+                        onEdit={
+                            onEdit
+                        }
+                        provider={
+                            provider
+                        }
                         onDragStart={(
                             event,
                             taskId

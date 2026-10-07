@@ -1,11 +1,7 @@
 package com.douglas.aitaskmanager.controller;
 
-import com.douglas.aitaskmanager.dto.AiChatRequest;
-import com.douglas.aitaskmanager.dto.AiChatResponse;
-import com.douglas.aitaskmanager.dto.ImprovedTaskResponse;
-import com.douglas.aitaskmanager.dto.TaskAnalysisResponse;
-import com.douglas.aitaskmanager.dto.TaskDecompositionResponse;
-import com.douglas.aitaskmanager.dto.WorkspaceAiSummaryResponse;
+import com.douglas.aitaskmanager.ai.AiProvider;
+import com.douglas.aitaskmanager.dto.*;
 import com.douglas.aitaskmanager.service.TaskAiService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,35 +22,79 @@ public class TaskAiController {
 
     @PostMapping("/{id}/ai/improve")
     public ResponseEntity<ImprovedTaskResponse> improveTask(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestBody(required = false)
+            AiProviderRequest request
     ) {
+
+        AiProvider provider =
+                request == null
+                        ? null
+                        : request.provider();
+
         return ResponseEntity.ok(
-                taskAiService.improveTask(id)
+                taskAiService.improveTask(
+                        id,
+                        provider
+                )
         );
     }
 
     @PostMapping("/{id}/ai/analyze")
     public ResponseEntity<TaskAnalysisResponse> analyzeTask(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestBody(required = false)
+            AiProviderRequest request
     ) {
+
+        AiProvider provider =
+                request == null
+                        ? null
+                        : request.provider();
+
         return ResponseEntity.ok(
-                taskAiService.analyzeTask(id)
+                taskAiService.analyzeTask(
+                        id,
+                        provider
+                )
         );
     }
 
     @PostMapping("/{id}/ai/decompose")
     public ResponseEntity<TaskDecompositionResponse> decomposeTask(
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestBody(required = false)
+            AiProviderRequest request
     ) {
+
+        AiProvider provider =
+                request == null
+                        ? null
+                        : request.provider();
+
         return ResponseEntity.ok(
-                taskAiService.decomposeTask(id)
+                taskAiService.decomposeTask(
+                        id,
+                        provider
+                )
         );
     }
 
     @PostMapping("/ai/summary")
-    public ResponseEntity<WorkspaceAiSummaryResponse> summarizeWorkspace() {
+    public ResponseEntity<WorkspaceAiSummaryResponse> summarizeWorkspace(
+            @RequestBody(required = false)
+            AiProviderRequest request
+    ) {
+
+        AiProvider provider =
+                request == null
+                        ? null
+                        : request.provider();
+
         return ResponseEntity.ok(
-                taskAiService.summarizeWorkspace()
+                taskAiService.summarizeWorkspace(
+                        provider
+                )
         );
     }
 
@@ -62,6 +102,7 @@ public class TaskAiController {
     public ResponseEntity<AiChatResponse> chat(
             @Valid @RequestBody AiChatRequest request
     ) {
+
         return ResponseEntity.ok(
                 taskAiService.chat(request)
         );

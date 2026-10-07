@@ -25,11 +25,17 @@ const COMPLEXITY_LABELS = {
     HIGH: "ALTA"
 };
 
+const AI_PROVIDER_LABELS = {
+    GEMINI: "Gemini",
+    OLLAMA: "Ollama"
+};
+
 function EditTaskModal({
                            task,
                            onClose,
                            onSubmit,
-                           onSubtasksCreated
+                           onSubtasksCreated,
+                           provider
                        }) {
     const [title, setTitle] =
         useState(task.title ?? "");
@@ -135,7 +141,8 @@ function EditTaskModal({
 
                 const improvedTask =
                     await taskService.improveTask(
-                        task.id
+                        task.id,
+                        provider
                     );
 
                 setTitle(
@@ -175,7 +182,8 @@ function EditTaskModal({
 
                 const result =
                     await taskService.analyzeTask(
-                        task.id
+                        task.id,
+                        provider
                     );
 
                 setAnalysis(result);
@@ -207,7 +215,8 @@ function EditTaskModal({
 
                 const result =
                     await taskService.decomposeTask(
-                        task.id
+                        task.id,
+                        provider
                     );
 
                 setDecomposition(result);
@@ -327,6 +336,10 @@ function EditTaskModal({
                 TASK_STATUS.DONE
         ).length;
 
+    const providerLabel =
+        AI_PROVIDER_LABELS[provider] ||
+        AI_PROVIDER_LABELS.GEMINI;
+
     return (
         <div
             className="modal-backdrop"
@@ -404,7 +417,7 @@ function EditTaskModal({
                             disabled={isBusy}
                         >
                             {isImproving
-                                ? "A IA está pensando..."
+                                ? `${providerLabel} está pensando...`
                                 : "✨ Melhorar com IA"}
                         </button>
 
@@ -417,7 +430,7 @@ function EditTaskModal({
                             disabled={isBusy}
                         >
                             {isAnalyzing
-                                ? "Analisando..."
+                                ? `${providerLabel} está analisando...`
                                 : "◈ Analisar com IA"}
                         </button>
 
@@ -430,7 +443,7 @@ function EditTaskModal({
                             disabled={isBusy}
                         >
                             {isDecomposing
-                                ? "Decompondo..."
+                                ? `${providerLabel} está decompondo...`
                                 : "⊞ Decompor com IA"}
                         </button>
                     </div>
